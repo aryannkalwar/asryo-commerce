@@ -66,7 +66,16 @@ const productRow = row => ({
   options: JSON.parse(row.options_json || '[]'),
 });
 
-for (const item of catalog) { db.prepare(`INSERT OR IGNORE INTO products(id,name,category,type,image,description,price_paise,updated_at) VALUES(?,?,?,?,?,?,?,?)`).run(item.id, item.name, item.category, item.type, item.image, item.description || '', item.pricePaise ?? null, now()); if (Number.isSafeInteger(item.pricePaise) && item.pricePaise > 0) { db.prepare('UPDATE products SET price_paise=?,description=?,updated_at=? WHERE id=?').run(item.pricePaise, item.description || '', now(), item.id); } }
+for (const item of catalog) {
+  db.prepare(`INSERT OR IGNORE INTO products(id,name,category,type,image,description,price_paise,updated_at)
+    VALUES(?,?,?,?,?,?,?,?)`).run(item.id, item.name, item.category, item.type, item.image, item.description || '', item.pricePaise ?? null, now());
+  // Refresh catalog details and explicitly confirmed prices in persistent databases.
+  // Preserve stock and sale status until ASRYO confirms availability.
+  db.prepare(`UPDATE products SET name=?,category=?,type=?,image=?,description=?,
+    price_paise=COALESCE(?,price_paise),updated_at=? WHERE id=?`)
+    .run(item.name, item.category, item.type, item.image, item.description || '',
+      Number.isSafeInteger(item.pricePaise) && item.pricePaise > 0 ? item.pricePaise : null, now(), item.id);
+}
 
 const mime = {
   '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8',

@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import sourceCatalog from '../data/catalog.json' with { type: 'json' };
 
 const project = fileURLToPath(new URL('..', import.meta.url));
 const dataDir = await mkdtemp(join(tmpdir(), 'asryo-smoke-'));
@@ -80,8 +81,9 @@ try {
   assert.equal(readiness.storeReady, false, 'store is closed by default');
   assert.equal(readiness.paymentMethod, 'cash_on_delivery', 'COD is the only configured payment method');
   const products = (await catalog.json()).products;
-  assert.equal(products.length, 20, 'all ASRYO preview products load');
-  assert(products.every(p => !p.active && p.pricePaise === null), 'no unpriced preview item is purchasable');
+  assert.equal(products.length, sourceCatalog.length, 'all ASRYO preview products load');
+  assert.equal(products.filter(p => p.type === 'Saree').length, 18, 'all source-listed sarees are in the catalog');
+  assert(products.every(p => !p.active && p.stock === null), 'preview items remain unavailable for purchase');
   assert.equal(adminPage.status, 200, 'admin page loads');
   assert.equal(trackPage.status, 200, 'tracking page loads');
 
