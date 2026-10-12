@@ -42,6 +42,7 @@ async function load(){
   catch{state.products=[];}
   const open=Boolean(state.status.storeReady);
   if(open){$('#announceStatus').textContent='Cash on delivery only';$('#heroAvailability').textContent='Thoughtful finds, ready to be yours.';$('#catalogIntro').textContent='Explore the ASRYO collection across clothing, jewellery, art and home.';$('#cartStatus').textContent='Cash on delivery only. Shipping is calculated at checkout.';$('#checkoutUnavailable').hidden=true;$('#checkoutForm').hidden=false;}
+  else $('#catalogIntro').textContent=`${state.products.length} preview pieces across clothing, jewellery, art and home. Prices and availability are being confirmed.`;
   const contacts=[];if(state.status.supportPhone)contacts.push(`Call ASRYO at ${state.status.supportPhone}`);if(state.status.supportEmail)contacts.push(`email ${state.status.supportEmail}`);if(contacts.length)$('#supportLine').textContent=`Questions? ${contacts.join(' or ')}.`;
   $('#aiDisclosure').textContent=state.status.assistant?'Your question is sent to OpenAI to prepare a shopping reply. Please do not include payment details or sensitive personal information.':'Your message stays on this site while the assistant is in preview mode.';
   renderProducts();renderCart();
