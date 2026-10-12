@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { createReadStream, existsSync, mkdirSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes, randomUUID, scrypt as scryptCallback, createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, scrypt as scryptCallback, createHash, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { DatabaseSync } from 'node:sqlite';
 import catalog from './data/catalog.json' with { type: 'json' };
@@ -37,22 +37,24 @@ db.exec(`
   );
   CREATE TABLE IF NOT EXISTS orders (
     id TEXT PRIMARY KEY, customer_id TEXT REFERENCES customers(id), public_token_hash TEXT NOT NULL,
-    status TEXT NOT NULL, payment_status TEXT NOT NULL, total_paise INTEGER NOT NULL,
+    status TEXT NOT NULL, payment_status TEXT NOT NULL, payment_method TEXT NOT NULL DEFAULT 'cash_on_delivery', total_paise INTEGER NOT NULL,
     shipping_paise INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'INR',
-    shipping_json TEXT NOT NULL, razorpay_order_id TEXT UNIQUE, razorpay_payment_id TEXT,
-    callback_verified_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    shipping_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS order_items (
     order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE, product_id TEXT NOT NULL,
     product_name TEXT NOT NULL, quantity INTEGER NOT NULL, unit_price_paise INTEGER NOT NULL,
     PRIMARY KEY(order_id, product_id)
   );
-  CREATE TABLE IF NOT EXISTS webhook_events (
-    event_id TEXT PRIMARY KEY, event_type TEXT NOT NULL, received_at TEXT NOT NULL
-  );
   CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at);
   CREATE INDEX IF NOT EXISTS orders_customer_created ON orders(customer_id, created_at DESC);
 `);
+
+// Keep databases created by the earlier payment preview compatible without
+// mislabelling historical orders as cash-on-delivery orders.
+if (!db.prepare('PRAGMA table_info(orders)').all().some(column => column.name === 'payment_method')) {
+  db.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'legacy_online'");
+}
 
 const now = () => new Date().toISOString();
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -82,7 +84,7 @@ function setHeaders(res, contentType = 'application/json; charset=utf-8') {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://api.razorpay.com; img-src 'self' data: https://*.razorpay.com; style-src 'self' 'unsafe-inline'; script-src 'self' https://checkout.razorpay.com; connect-src 'self' https://api.openai.com https://api.resend.com; upgrade-insecure-requests");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.openai.com https://api.resend.com; upgrade-insecure-requests");
   if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 }
 
@@ -171,10 +173,6 @@ function requireAdmin(req) {
   if (!session) throw Object.assign(new Error('Admin sign-in required'), { status: 401 });
 }
 
-function secureEqHex(a, b) {
-  if (!/^[a-f0-9]+$/i.test(a || '') || !/^[a-f0-9]+$/i.test(b || '') || a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
-}
 function secureEqText(a, b) {
   const left=Buffer.from(String(a)); const right=Buffer.from(String(b));
   return left.length===right.length && timingSafeEqual(left,right);
@@ -209,37 +207,15 @@ function allProducts() {
 
 function publicOrder(order) {
   return { id: order.id, status: order.status, paymentStatus: order.payment_status,
+    paymentMethod: order.payment_method || 'legacy_online',
     totalPaise: order.total_paise, shippingPaise: order.shipping_paise, currency: order.currency,
     createdAt: order.created_at, updatedAt: order.updated_at };
 }
 
-function verifyWebhook(raw, signature) {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-  if (!secret || !signature) return false;
-  const expected = createHmac('sha256', secret).update(raw).digest('hex');
-  return secureEqHex(expected, String(signature));
-}
-
-async function createRazorpayOrder({ orderId, amount, email }) {
-  const id = process.env.RAZORPAY_KEY_ID;
-  const secret = process.env.RAZORPAY_KEY_SECRET;
-  if (!id || !secret) throw Object.assign(new Error('Razorpay is not configured'), { status: 503 });
-  const response = await fetch('https://api.razorpay.com/v1/orders', {
-    method: 'POST',
-    headers: { Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString('base64')}`, 'Content-Type':'application/json' },
-    body: JSON.stringify({ amount, currency: 'INR', receipt: orderId.slice(0, 40), notes: { asryo_order: orderId, email } }),
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok || !result.id || result.amount !== amount || result.currency !== 'INR') {
-    throw Object.assign(new Error('Razorpay could not create the order'), { status: 502 });
-  }
-  return { id: result.id, keyId: id };
-}
-
 async function checkout(req, res) {
   const input = await jsonBody(req);
-  if (String(process.env.STORE_READY).toLowerCase() !== 'true') return json(res, 503, { error: 'Online ordering is not open yet.' });
-  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET || !process.env.RAZORPAY_WEBHOOK_SECRET) return json(res, 503, { error: 'Payment setup is incomplete.' });
+  const available = db.prepare('SELECT COUNT(*) AS n FROM products WHERE active=1 AND price_paise>0 AND stock>0').get().n;
+  if (String(process.env.STORE_READY).toLowerCase() !== 'true' || available < 1) return json(res, 503, { error: 'Cash-on-delivery ordering is not open yet.' });
   const email = String(input.email || '').trim().toLowerCase();
   const phone = String(input.phone || '').trim();
   const address = input.address || {};
@@ -260,13 +236,6 @@ async function checkout(req, res) {
     }
     items.push({ product, qty });
   }
-  // Pending Razorpay orders reserve stock for their 30-minute checkout window.
-  for (const { product, qty } of items) {
-    const reserved = db.prepare(`SELECT COALESCE(SUM(oi.quantity),0) AS units FROM order_items oi
-      JOIN orders o ON o.id=oi.order_id WHERE oi.product_id=? AND o.payment_status='created'
-      AND o.created_at>?`).get(product.id, new Date(Date.now()-30*60*1000).toISOString()).units;
-    if (product.stock - reserved < qty) return json(res, 400, { error: 'A selected item has just sold out. Refresh your cart.' });
-  }
   const subtotal = items.reduce((sum, x) => sum + x.product.price_paise * x.qty, 0);
   const shipping = Math.max(0, Number(process.env.SHIPPING_FEE_PAISE || 0));
   const amount = subtotal + shipping;
@@ -275,17 +244,27 @@ async function checkout(req, res) {
   const tracking = randomBytes(32).toString('base64url');
   const customer = customerFrom(req);
   const at = now();
-  db.prepare(`INSERT INTO orders(id,customer_id,public_token_hash,status,payment_status,total_paise,shipping_paise,shipping_json,created_at,updated_at)
-    VALUES(?,?,?,'payment_pending','created',?, ?, ?, ?, ?)`)
-    .run(id, customer?.id || null, hash(tracking), amount, shipping, JSON.stringify({ ...address, email, phone }), at, at);
-  const insertLine = db.prepare('INSERT INTO order_items(order_id,product_id,product_name,quantity,unit_price_paise) VALUES(?,?,?,?,?)');
-  for (const x of items) insertLine.run(id, x.product.id, x.product.name, x.qty, x.product.price_paise);
+  db.exec('BEGIN IMMEDIATE');
   try {
-    const rzp = await createRazorpayOrder({ orderId: id, amount, email });
-    db.prepare('UPDATE orders SET razorpay_order_id=?,updated_at=? WHERE id=?').run(rzp.id, now(), id);
-    return json(res, 201, { orderId: id, trackingToken: tracking, amountPaise: amount, currency: 'INR', razorpayOrderId: rzp.id, razorpayKeyId: rzp.keyId, email });
+    for (const { product, qty } of items) {
+      const current = db.prepare('SELECT stock,active,price_paise FROM products WHERE id=?').get(product.id);
+      if (!current?.active || current.price_paise !== product.price_paise || current.stock < qty) {
+        db.exec('ROLLBACK');
+        return json(res, 400, { error: 'A selected item has just sold out or changed. Refresh your cart.' });
+      }
+    }
+    db.prepare(`INSERT INTO orders(id,customer_id,public_token_hash,status,payment_status,payment_method,total_paise,shipping_paise,shipping_json,created_at,updated_at)
+      VALUES(?,?,?,'processing','due_on_delivery','cash_on_delivery',?, ?, ?, ?, ?)`)
+      .run(id, customer?.id || null, hash(tracking), amount, shipping, JSON.stringify({ ...address, email, phone }), at, at);
+    const insertLine = db.prepare('INSERT INTO order_items(order_id,product_id,product_name,quantity,unit_price_paise) VALUES(?,?,?,?,?)');
+    for (const x of items) {
+      insertLine.run(id, x.product.id, x.product.name, x.qty, x.product.price_paise);
+      db.prepare('UPDATE products SET stock=stock-?,updated_at=? WHERE id=?').run(x.qty, now(), x.product.id);
+    }
+    db.exec('COMMIT');
+    return json(res, 201, { orderId: id, trackingToken: tracking, amountPaise: amount, currency: 'INR', paymentMethod: 'cash_on_delivery' });
   } catch (error) {
-    db.prepare("UPDATE orders SET status='payment_setup_failed',payment_status='failed',updated_at=? WHERE id=?").run(now(), id);
+    db.exec('ROLLBACK');
     throw error;
   }
 }
@@ -296,7 +275,7 @@ async function handle(req, res) {
   const path = decodeURIComponent(url.pathname);
   try {
     if (req.method === 'GET' && path === '/healthz') return json(res, 200, { ok:true });
-    if (path.startsWith('/api/') && req.method !== 'GET' && path !== '/api/razorpay/webhook') requireSameOrigin(req);
+    if (path.startsWith('/api/') && req.method !== 'GET') requireSameOrigin(req);
     const limits = {
       '/api/auth/login': [8, 15*60*1000], '/api/auth/register': [5, 60*60*1000],
       '/api/admin/login': [8, 15*60*1000], '/api/assistant': [30, 60*1000],
@@ -306,8 +285,8 @@ async function handle(req, res) {
 
     if (req.method === 'GET' && path === '/api/status') {
       const available = db.prepare('SELECT COUNT(*) AS n FROM products WHERE active=1 AND price_paise>0 AND stock>0').get().n;
-      const ready = String(process.env.STORE_READY).toLowerCase() === 'true' && Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET);
-      return json(res, 200, { storeReady: ready, availableProducts: available, assistant: Boolean(process.env.OPENAI_API_KEY), accountVerification: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM), supportEmail: process.env.PUBLIC_SUPPORT_EMAIL || null, supportPhone: process.env.PUBLIC_SUPPORT_PHONE || '+916394755253', businessName: process.env.PUBLIC_BUSINESS_NAME || 'ASRYO' });
+      const ready = String(process.env.STORE_READY).toLowerCase() === 'true' && available > 0;
+      return json(res, 200, { storeReady: ready, availableProducts: available, paymentMethod: 'cash_on_delivery', assistant: Boolean(process.env.OPENAI_API_KEY), accountVerification: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM), supportEmail: process.env.PUBLIC_SUPPORT_EMAIL || null, supportPhone: process.env.PUBLIC_SUPPORT_PHONE || '+916394755253', businessName: process.env.PUBLIC_BUSINESS_NAME || 'ASRYO' });
     }
     if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: allProducts() });
 
@@ -376,7 +355,7 @@ async function handle(req, res) {
     }
     if (req.method === 'GET' && path === '/api/account/orders') {
       const user = customerFrom(req); if(!user) return json(res,401,{error:'Sign in required.'});
-      const orders = db.prepare('SELECT id,status,payment_status,total_paise,shipping_paise,currency,created_at,updated_at FROM orders WHERE customer_id=? ORDER BY created_at DESC LIMIT 100').all(user.id);
+      const orders = db.prepare('SELECT id,status,payment_status,payment_method,total_paise,shipping_paise,currency,created_at,updated_at FROM orders WHERE customer_id=? ORDER BY created_at DESC LIMIT 100').all(user.id);
       return json(res,200,{orders:orders.map(publicOrder)});
     }
 
@@ -411,51 +390,24 @@ async function handle(req, res) {
     if (req.method === 'PATCH' && path.startsWith('/api/admin/orders/')) {
       const id=path.slice('/api/admin/orders/'.length); const {status}=await jsonBody(req,8*1024);
       const allowed=new Set(['processing','shipped','delivered','cancelled']);
-      const order=db.prepare('SELECT status,payment_status FROM orders WHERE id=?').get(id);
+      const order=db.prepare('SELECT status,payment_status,payment_method FROM orders WHERE id=?').get(id);
       if(!order) return json(res,404,{error:'Order not found.'});
-      if(!allowed.has(status) || (status!=='cancelled' && order.payment_status!=='paid')) return json(res,400,{error:'This order status change is not allowed.'});
-      db.prepare('UPDATE orders SET status=?,updated_at=? WHERE id=?').run(status,now(),id);
+      if(!allowed.has(status) || order.status==='cancelled' || (status==='cancelled' && order.status!=='processing')) return json(res,400,{error:'This order status change is not allowed.'});
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        db.prepare('UPDATE orders SET status=?,payment_status=?,updated_at=? WHERE id=?')
+          .run(status,status==='delivered' && order.payment_method==='cash_on_delivery'?'collected':status==='cancelled'?'cancelled':order.payment_status,now(),id);
+        if(status==='cancelled') {
+          for (const item of db.prepare('SELECT product_id,quantity FROM order_items WHERE order_id=?').all(id)) {
+            db.prepare('UPDATE products SET stock=stock+?,updated_at=? WHERE id=?').run(item.quantity,now(),item.product_id);
+          }
+        }
+        db.exec('COMMIT');
+      } catch(error) { db.exec('ROLLBACK'); throw error; }
       return json(res,200,{ok:true});
     }
 
     if (req.method === 'POST' && path === '/api/checkout/orders') return await checkout(req,res);
-    if (req.method === 'POST' && path === '/api/razorpay/callback') {
-      const input=await jsonBody(req,12*1024); const order=db.prepare('SELECT id,razorpay_order_id FROM orders WHERE id=?').get(String(input.orderId||''));
-      if(!order || order.razorpay_order_id!==input.razorpay_order_id) return json(res,400,{error:'Payment order could not be verified.'});
-      const expected=createHmac('sha256',process.env.RAZORPAY_KEY_SECRET||'').update(`${order.razorpay_order_id}|${String(input.razorpay_payment_id||'')}`).digest('hex');
-      if(!process.env.RAZORPAY_KEY_SECRET || !secureEqHex(expected,String(input.razorpay_signature||''))) return json(res,400,{error:'Payment signature is invalid.'});
-      db.prepare('UPDATE orders SET razorpay_payment_id=?,callback_verified_at=?,updated_at=? WHERE id=?').run(String(input.razorpay_payment_id),now(),now(),order.id);
-      return json(res,200,{ok:true,status:'awaiting_verified_webhook'});
-    }
-    if (req.method === 'POST' && path === '/api/razorpay/webhook') {
-      const raw=await body(req,1024*1024); const signature=req.headers['x-razorpay-signature'];
-      if(!verifyWebhook(raw,String(signature||''))) return json(res,401,{error:'Webhook signature rejected.'});
-      const event=JSON.parse(raw.toString('utf8')); const eventId=String(req.headers['x-razorpay-event-id']||hash(raw));
-      if(db.prepare('SELECT 1 FROM webhook_events WHERE event_id=?').get(eventId)) return json(res,200,{ok:true,duplicate:true});
-      const type=String(event.event||'');
-      const orderEntity=event.payload?.order?.entity;
-      const paymentEntity=event.payload?.payment?.entity;
-      const rzpOrderId=String(orderEntity?.id||paymentEntity?.order_id||'');
-      db.exec('BEGIN IMMEDIATE');
-      try {
-        db.prepare('INSERT INTO webhook_events(event_id,event_type,received_at) VALUES(?,?,?)').run(eventId,type,now());
-        if(type==='order.paid' && orderEntity?.status==='paid') {
-          const stored=db.prepare('SELECT id,total_paise,payment_status,created_at FROM orders WHERE razorpay_order_id=?').get(rzpOrderId);
-          const amount=Number(orderEntity.amount_paid ?? orderEntity.amount);
-          if(stored && stored.payment_status==='created' && amount===stored.total_paise && orderEntity.currency==='INR') {
-            const stockLines=db.prepare('SELECT oi.product_id,oi.quantity,p.stock FROM order_items oi JOIN products p ON p.id=oi.product_id WHERE oi.order_id=?').all(stored.id);
-            const enough=stockLines.every(line=>line.stock>=line.quantity);
-            db.prepare("UPDATE orders SET payment_status='paid',status=?,razorpay_payment_id=COALESCE(?,razorpay_payment_id),updated_at=? WHERE id=? AND payment_status='created'")
-              .run(enough?'processing':'manual_review',paymentEntity?.id||null,now(),stored.id);
-            if(enough) for(const item of stockLines) db.prepare('UPDATE products SET stock=stock-?,updated_at=? WHERE id=? AND stock>=?').run(item.quantity,now(),item.product_id,item.quantity);
-          }
-        } else if(type==='payment.failed' && paymentEntity?.order_id) {
-          db.prepare("UPDATE orders SET payment_status='failed',status='payment_failed',updated_at=? WHERE razorpay_order_id=? AND payment_status='created'").run(now(),paymentEntity.order_id);
-        }
-        db.exec('COMMIT');
-      } catch (error) { db.exec('ROLLBACK'); throw error; }
-      return json(res,200,{ok:true});
-    }
     if (req.method === 'GET' && path === '/api/orders/track') {
       const id=url.searchParams.get('id')||''; const token=url.searchParams.get('token')||'';
       const order=db.prepare('SELECT * FROM orders WHERE id=? AND public_token_hash=?').get(id,hash(token));
