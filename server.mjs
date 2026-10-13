@@ -67,14 +67,15 @@ const productRow = row => ({
 });
 
 for (const item of catalog) {
+  const initialStock = item.type === 'Saree' ? 20 : null;
   db.prepare(`INSERT OR IGNORE INTO products(id,name,category,type,image,description,price_paise,updated_at)
     VALUES(?,?,?,?,?,?,?,?)`).run(item.id, item.name, item.category, item.type, item.image, item.description || '', item.pricePaise ?? null, now());
   // Refresh catalog details and explicitly confirmed prices in persistent databases.
-  // Preserve stock and sale status until ASRYO confirms availability.
+  // ASRYO confirmed twenty units per saree; preserve any later stock changes and sale status.
   db.prepare(`UPDATE products SET name=?,category=?,type=?,image=?,description=?,
-    price_paise=COALESCE(?,price_paise),updated_at=? WHERE id=?`)
+    price_paise=COALESCE(?,price_paise),stock=COALESCE(stock,?),updated_at=? WHERE id=?`)
     .run(item.name, item.category, item.type, item.image, item.description || '',
-      Number.isSafeInteger(item.pricePaise) && item.pricePaise > 0 ? item.pricePaise : null, now(), item.id);
+      Number.isSafeInteger(item.pricePaise) && item.pricePaise > 0 ? item.pricePaise : null, initialStock, now(), item.id);
 }
 
 const mime = {
@@ -292,7 +293,7 @@ async function handle(req, res) {
     if (req.method === 'GET' && path === '/api/status') {
       const available = db.prepare('SELECT COUNT(*) AS n FROM products WHERE active=1 AND price_paise>0 AND stock>0').get().n;
       const ready = String(process.env.STORE_READY).toLowerCase() === 'true' && available > 0;
-      return json(res, 200, { storeReady: ready, availableProducts: available, paymentMethod: 'cash_on_delivery', assistant: Boolean(process.env.OPENAI_API_KEY), accountVerification: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM), supportEmail: process.env.PUBLIC_SUPPORT_EMAIL || null, supportPhone: process.env.PUBLIC_SUPPORT_PHONE || '+916394755253', businessName: process.env.PUBLIC_BUSINESS_NAME || 'ASRYO' });
+      return json(res, 200, { storeReady: ready, availableProducts: available, paymentMethod: 'cash_on_delivery', assistant: Boolean(process.env.OPENAI_API_KEY), accountVerification: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM), supportEmail: process.env.PUBLIC_SUPPORT_EMAIL || null, supportPhone: process.env.PUBLIC_SUPPORT_PHONE || null, businessName: process.env.PUBLIC_BUSINESS_NAME || 'ASRYO' });
     }
     if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: allProducts() });
 
