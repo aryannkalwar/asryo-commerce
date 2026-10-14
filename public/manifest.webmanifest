@@ -1,0 +1,11 @@
+{
+  "name": "ASRYO — The Art of Everyday Style",
+  "short_name": "ASRYO",
+  "description": "Explore the ASRYO launch preview, even when you are offline.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fcfaf6",
+  "theme_color": "#4b2234",
+  "icons": [{ "src": "/asryo-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

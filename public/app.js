@@ -5,12 +5,13 @@ const money = paise => paise == null ? 'Price to be announced' : new Intl.Number
 const previewPrice = paise => paise == null ? 'Price to be announced' : `Preview price · ${money(paise)}`;
 const paymentLabel = order => order.paymentMethod === 'cash_on_delivery' ? (order.paymentStatus === 'collected' ? 'Cash on delivery · collected' : 'Cash on delivery · due on delivery') : 'Payment details unavailable';
 const labels = {clothing:'Clothing & Ethnic Wear',jewellery:'Jewellery',art:'Art & Paintings','home-lifestyle':'Home & Lifestyle'};
-const state = { products:[], status:{storeReady:false,assistant:false}, cart:readCart(), activeDialog:null };
+const state = { products:[], status:{storeReady:false,assistant:false}, cart:readCart(), activeDialog:null, offlinePreview:!navigator.onLine };
 
 function readCart(){try{return JSON.parse(localStorage.getItem('asryo_cart')||'{}')}catch{return {}}}
 function saveCart(){localStorage.setItem('asryo_cart',JSON.stringify(state.cart));renderCart()}
 async function api(path, options={}){
   const response=await fetch(path,{...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})},credentials:'same-origin'});
+  if(response.headers.get('X-ASRYO-Offline')==='1')state.offlinePreview=true;
   const data=await response.json().catch(()=>({}));
   if(!response.ok) throw new Error(data.error||'Something went wrong. Please try again.');
   return data;
@@ -33,16 +34,22 @@ function renderCart(){
   const items=state.products.filter(p=>state.cart[p.id]);const count=items.reduce((sum,p)=>sum+state.cart[p.id],0);$('#bagCount').textContent=String(count);
   if(!items.length){$('#cartItems').innerHTML='<div class="empty-state"><p class="kicker">A FRESH PAGE</p><h3>Your bag is empty.</h3><p class="muted">Browse the collection to find a piece that speaks to you.</p><a class="text-link" href="#collection">Explore the edit ↗</a></div>';$('#subtotal').textContent='₹0';$('#checkoutOpen').disabled=true;return}
   let total=0;$('#cartItems').innerHTML=items.map(p=>{const qty=state.cart[p.id];const unit=p.pricePaise||0;total+=unit*qty;return `<article class="cart-line"><img src="${escapeHtml(p.image)}" alt=""><div><h3>${escapeHtml(p.name)}</h3><p>${previewPrice(p.pricePaise)}</p><div class="quantity"><button data-qty="${escapeHtml(p.id)}" data-delta="-1" aria-label="Remove one ${escapeHtml(p.name)}">−</button><span>${qty}</span><button data-qty="${escapeHtml(p.id)}" data-delta="1" aria-label="Add one ${escapeHtml(p.name)}">+</button><button class="remove-item" data-remove="${escapeHtml(p.id)}">Remove</button></div></div></article>`}).join('');
-  $('#subtotal').textContent=money(total);const ready=state.status.storeReady&&items.every(p=>p.active&&p.pricePaise&&p.stock>=state.cart[p.id]);$('#checkoutOpen').disabled=!ready;$('#cartStatus').textContent=ready?'Cash on delivery only. Shipping is calculated at checkout.':'Preview prices are for reference. Final prices and availability will be confirmed before orders open.';
+  $('#subtotal').textContent=money(total);const ready=state.status.storeReady&&navigator.onLine&&!state.offlinePreview&&items.every(p=>p.active&&p.pricePaise&&p.stock>=state.cart[p.id]);$('#checkoutOpen').disabled=!ready;$('#cartStatus').textContent=state.offlinePreview?'Saved preview only. Reconnect to confirm availability and place an order.':ready?'Cash on delivery only. Shipping is calculated at checkout.':'Preview prices are for reference. Final prices and availability will be confirmed before orders open.';
 }
 function showDetails(id){const p=state.products.find(x=>x.id===id);if(!p)return;const available=p.active&&p.pricePaise>0&&p.stock>0;$('#productDetail').innerHTML=`<div class="detail-grid"><div class="detail-photo"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}"></div><div class="detail-copy"><p class="kicker">${escapeHtml(labels[p.category]||p.category)} / ${escapeHtml(p.type)}</p><h2>${escapeHtml(p.name)}</h2>${p.pricePaise==null?'':`<span class="price-context detail-price-context">PREVIEW PRICE · SUBJECT TO CONFIRMATION</span>`}<strong class="detail-price">${money(p.pricePaise)}</strong><p>${escapeHtml(p.description||'This piece is part of the ASRYO launch preview. Product specifications and availability are being confirmed.')}</p><p class="small muted">${available?`${p.stock} available`:'Prices and availability will be confirmed before orders open.'}</p>${available?`<button class="button button-dark" data-add="${escapeHtml(p.id)}" data-close-detail>Add to bag <span>+</span></button>`:'<span class="preview-note">LAUNCH PREVIEW</span>'}</div></div>`;setDialog($('#productDialog'))}
 
 async function load(){
   $('#year').textContent=String(new Date().getFullYear());
-  try{const [catalog,status]=await Promise.all([api('/api/products'),api('/api/status')]);state.products=catalog.products;state.status=status;}
-  catch{state.products=[];}
-  const open=Boolean(state.status.storeReady);
-  if(open){$('#announceStatus').textContent='Cash on delivery only';$('#heroAvailability').textContent='Thoughtful finds, ready to be yours.';$('#catalogIntro').textContent='Explore the ASRYO collection across clothing, jewellery, art and home.';$('#cartStatus').textContent='Cash on delivery only. Shipping is calculated at checkout.';$('#checkoutUnavailable').hidden=true;$('#checkoutForm').hidden=false;}
+  state.offlinePreview=!navigator.onLine;
+  const results=await Promise.allSettled([api('/api/products'),api('/api/status')]);
+  if(results[0].status==='fulfilled')state.products=results[0].value.products;
+  if(results[1].status==='fulfilled')state.status=results[1].value;
+  state.offlinePreview=state.offlinePreview||!navigator.onLine||results.some(result=>result.status==='rejected');
+  const open=Boolean(state.status.storeReady&&navigator.onLine&&!state.offlinePreview);
+  $('#announceStatus').textContent=state.offlinePreview?'Offline preview · reconnect to confirm current details':open?'Cash on delivery only':'Prices and availability are being confirmed';
+  $('#checkoutUnavailable').hidden=open;
+  $('#checkoutForm').hidden=!open;
+  if(open){$('#announceStatus').textContent='Cash on delivery only';$('#heroAvailability').textContent='Thoughtful finds, ready to be yours.';$('#catalogIntro').textContent='Explore the ASRYO collection across clothing, jewellery, art and home.';$('#cartStatus').textContent='Cash on delivery only. Shipping is calculated at checkout.';}
   else $('#catalogIntro').textContent=`${state.products.length} preview pieces across clothing, jewellery, art and home. Any prices shown are for reference only; final prices and availability will be confirmed before orders open.`;
   const contacts=[];if(state.status.supportPhone)contacts.push(`Call ASRYO at ${state.status.supportPhone}`);if(state.status.supportEmail)contacts.push(`email ${state.status.supportEmail}`);if(contacts.length)$('#supportLine').textContent=`Questions? ${contacts.join(' or ')}.`;
   $('#aiDisclosure').textContent=state.status.assistant?'Your question is sent to OpenAI to prepare a shopping reply. Please do not include payment details or sensitive personal information.':'Your message stays on this site while the assistant is in preview mode.';
@@ -61,6 +68,9 @@ document.addEventListener('click',async event=>{
   const category=event.target.closest('[data-category-link]');if(category){$('#categoryFilter').value=category.dataset.categoryLink;renderProducts();return}
   if(event.target.id==='clearSearch'){$('#search').value='';$('#categoryFilter').value='all';renderProducts()}
 });
+if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('/sw.js').catch(()=>{});
+window.addEventListener('offline',()=>{state.offlinePreview=true;$('#announceStatus').textContent='Offline preview · reconnect to confirm current details';$('#checkoutUnavailable').hidden=false;$('#checkoutForm').hidden=true;renderCart()});
+window.addEventListener('online',()=>load());
 $('#search').addEventListener('input',renderProducts);$('#categoryFilter').addEventListener('change',renderProducts);
 $('#checkoutOpen').addEventListener('click',()=>setDialog($('#checkoutDialog')));
 $('#assistantOpen').addEventListener('click',()=>openDrawer('assistantDrawer'));
