@@ -430,7 +430,7 @@ async function handle(req, res) {
       if (!full.startsWith(resolve(join(root,'public')))) return json(res,404,{error:'Not found.'});
       if (!existsSync(full)) return json(res,404,{error:'Not found.'});
       setHeaders(res,mime[extname(full)] || 'application/octet-stream');
-      res.setHeader('Cache-Control', extname(full)==='.html' ? 'no-cache' : 'public, max-age=86400, stale-while-revalidate=604800');
+      res.setHeader('Cache-Control', ['.html','.js','.css'].includes(extname(full)) ? 'no-cache' : 'public, max-age=86400, stale-while-revalidate=604800');
       res.statusCode=200; return createReadStream(full).pipe(res);
     }
     return json(res,404,{error:'Not found.'});
@@ -444,3 +444,4 @@ async function handle(req, res) {
 
 const server=createServer(handle);
 server.listen(port,'0.0.0.0',()=>console.log(`ASRYO server listening on ${port}`));
+
