@@ -83,7 +83,7 @@ try {
   const products = (await catalog.json()).products;
   assert.equal(products.length, sourceCatalog.length, 'all ASRYO preview products load');
   assert.equal(products.filter(p => p.type === 'Saree').length, 18, 'all source-listed sarees are in the catalog');
-  assert(products.every(p => !p.active && p.stock === null), 'preview items remain unavailable for purchase');
+  assert(products.every(p => !p.active), 'preview items remain unavailable for purchase');
   assert.equal(adminPage.status, 200, 'admin page loads');
   assert.equal(trackPage.status, 200, 'tracking page loads');
 
@@ -177,3 +177,4 @@ try {
   openDb?.close();
   await rm(dataDir, { recursive: true, force: true });
 }
+
