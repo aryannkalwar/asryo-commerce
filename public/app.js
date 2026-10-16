@@ -5,7 +5,7 @@ const money = paise => paise == null ? 'Price to be announced' : new Intl.Number
 const previewPrice = paise => paise == null ? 'Price to be announced' : `Preview price · ${money(paise)}`;
 const paymentLabel = order => order.paymentMethod === 'cash_on_delivery' ? (order.paymentStatus === 'collected' ? 'Cash on delivery · collected' : 'Cash on delivery · due on delivery') : 'Payment details unavailable';
 const labels = {clothing:'Clothing & Ethnic Wear',jewellery:'Jewellery',art:'Art & Paintings','home-lifestyle':'Home & Lifestyle'};
-const state = { products:[], status:{storeReady:false,assistant:false}, cart:readCart(), activeDialog:null, offlinePreview:!navigator.onLine };
+const state = { products:[], status:{storeReady:false,assistant:false}, cart:{}, activeDialog:null, offlinePreview:!navigator.onLine };
 
 function readCart(){try{return JSON.parse(localStorage.getItem('asryo_cart')||'{}')}catch{return {}}}
 function saveCart(){localStorage.setItem('asryo_cart',JSON.stringify(state.cart));renderCart()}
@@ -27,8 +27,8 @@ function productCard(p){
 function renderProducts(){
   const term=$('#search').value.trim().toLowerCase();const category=$('#categoryFilter').value;
   const found=state.products.filter(p=>(category==='all'||p.category===category)&&(!term||`${p.name} ${p.category} ${p.type} ${p.description}`.toLowerCase().includes(term)));
-  $('#resultCount').textContent=`${found.length} ${found.length===1?'piece':'pieces'} in the edit`;
-  $('#productGrid').innerHTML=found.length?found.map(productCard).join(''):`<div class="empty-state"><p class="kicker">NO MATCHES YET</p><h3>Try another search.</h3><button class="text-link" id="clearSearch" type="button">Show the full edit ↗</button></div>`;
+  $('#resultCount').textContent=found.length ? `${found.length} ${found.length===1?'piece':'pieces'} in the edit` : '';
+  $('#productGrid').innerHTML=found.length?found.map(productCard).join(''):`<div class="empty-state"><p class="kicker">THE NEXT CHAPTER</p><h3>New collection coming soon.</h3><p class="muted">We are refreshing ASRYO. Products are not available for browsing or ordering right now.</p></div>`;
 }
 function renderCart(){
   const items=state.products.filter(p=>state.cart[p.id]);const count=items.reduce((sum,p)=>sum+state.cart[p.id],0);$('#bagCount').textContent=String(count);
@@ -43,14 +43,16 @@ async function load(){
   state.offlinePreview=!navigator.onLine;
   const results=await Promise.allSettled([api('/api/products'),api('/api/status')]);
   if(results[0].status==='fulfilled')state.products=results[0].value.products;
+  state.products=[];state.cart={};
   if(results[1].status==='fulfilled')state.status=results[1].value;
   state.offlinePreview=state.offlinePreview||!navigator.onLine||results.some(result=>result.status==='rejected');
-  const open=Boolean(state.status.storeReady&&navigator.onLine&&!state.offlinePreview);
-  $('#announceStatus').textContent=state.offlinePreview?'Offline preview · reconnect to confirm current details':open?'Cash on delivery only':'Prices and availability are being confirmed';
+  const open=false;state.status.storeReady=false;
+  $('#announceStatus').textContent='New collection coming soon';
+  $('#heroAvailability').textContent='Shopping is temporarily unavailable while we prepare the next collection.';
   $('#checkoutUnavailable').hidden=open;
   $('#checkoutForm').hidden=!open;
   if(open){$('#announceStatus').textContent='Cash on delivery only';$('#heroAvailability').textContent='Thoughtful finds, ready to be yours.';$('#catalogIntro').textContent='Explore the ASRYO collection across clothing, jewellery, art and home.';$('#cartStatus').textContent='Cash on delivery only. Shipping is calculated at checkout.';}
-  else $('#catalogIntro').textContent=`${state.products.length} preview pieces across clothing, jewellery, art and home. Any prices shown are for reference only; final prices and availability will be confirmed before orders open.`;
+  else $('#catalogIntro').textContent='Our new ASRYO collection is coming soon. Products are temporarily unavailable.';
   const contacts=[];if(state.status.supportPhone)contacts.push(`Call ASRYO at ${state.status.supportPhone}`);if(state.status.supportEmail)contacts.push(`email ${state.status.supportEmail}`);if(contacts.length)$('#supportLine').textContent=`Questions? ${contacts.join(' or ')}.`;
   $('#aiDisclosure').textContent=state.status.assistant?'Your question is sent to OpenAI to prepare a shopping reply. Please do not include payment details or sensitive personal information.':'Your message stays on this site while the assistant is in preview mode.';
   renderProducts();renderCart();
@@ -68,7 +70,7 @@ document.addEventListener('click',async event=>{
   const category=event.target.closest('[data-category-link]');if(category){$('#categoryFilter').value=category.dataset.categoryLink;renderProducts();return}
   if(event.target.id==='clearSearch'){$('#search').value='';$('#categoryFilter').value='all';renderProducts()}
 });
-if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('/sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).catch(()=>{});
 window.addEventListener('offline',()=>{state.offlinePreview=true;$('#announceStatus').textContent='Offline preview · reconnect to confirm current details';$('#checkoutUnavailable').hidden=false;$('#checkoutForm').hidden=true;renderCart()});
 window.addEventListener('online',()=>load());
 $('#search').addEventListener('input',renderProducts);$('#categoryFilter').addEventListener('change',renderProducts);
