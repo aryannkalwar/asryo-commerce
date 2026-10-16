@@ -14,6 +14,8 @@ const dataDir = resolve(process.env.DATA_DIR || join(root, 'data'));
 mkdirSync(dataDir, { recursive: true });
 const db = new DatabaseSync(join(dataDir, 'asryo.sqlite'), { timeout: 5000 });
 const rateBuckets = new Map();
+// Keep archived products and past orders in SQLite, but publish no products until ASRYO relaunches.
+const HIDE_PUBLIC_PRODUCTS = true;
 db.exec(`
   PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = ON;
@@ -220,6 +222,7 @@ function publicOrder(order) {
 }
 
 async function checkout(req, res) {
+  if (HIDE_PUBLIC_PRODUCTS) return json(res, 503, { error: 'The ASRYO collection is currently unavailable.' });
   const input = await jsonBody(req);
   const available = db.prepare('SELECT COUNT(*) AS n FROM products WHERE active=1 AND price_paise>0 AND stock>0').get().n;
   if (String(process.env.STORE_READY).toLowerCase() !== 'true' || available < 1) return json(res, 503, { error: 'Cash-on-delivery ordering is not open yet.' });
@@ -292,21 +295,21 @@ async function handle(req, res) {
 
     if (req.method === 'GET' && path === '/api/status') {
       const available = db.prepare('SELECT COUNT(*) AS n FROM products WHERE active=1 AND price_paise>0 AND stock>0').get().n;
-      const ready = String(process.env.STORE_READY).toLowerCase() === 'true' && available > 0;
-      return json(res, 200, { storeReady: ready, availableProducts: available, paymentMethod: 'cash_on_delivery', assistant: Boolean(process.env.OPENAI_API_KEY), accountVerification: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM), supportEmail: process.env.PUBLIC_SUPPORT_EMAIL || null, supportPhone: process.env.PUBLIC_SUPPORT_PHONE || null, businessName: process.env.PUBLIC_BUSINESS_NAME || 'ASRYO' });
+      const ready = !HIDE_PUBLIC_PRODUCTS && String(process.env.STORE_READY).toLowerCase() === 'true' && available > 0;
+      return json(res, 200, { storeReady: ready, availableProducts: HIDE_PUBLIC_PRODUCTS ? 0 : available, paymentMethod: 'cash_on_delivery', assistant: Boolean(process.env.OPENAI_API_KEY), accountVerification: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM), supportEmail: process.env.PUBLIC_SUPPORT_EMAIL || null, supportPhone: process.env.PUBLIC_SUPPORT_PHONE || null, businessName: process.env.PUBLIC_BUSINESS_NAME || 'ASRYO' });
     }
-    if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: allProducts() });
+    if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: HIDE_PUBLIC_PRODUCTS ? [] : allProducts() });
 
     if (req.method === 'POST' && path === '/api/assistant') {
       const { question = '' } = await jsonBody(req, 12 * 1024);
       const q = String(question).trim().slice(0, 700);
       if (!q) return json(res, 400, { error: 'Ask a question about the collection.' });
-      const products = allProducts().filter(p => p.active).map(p => ({ name:p.name, category:p.category, type:p.type, description:p.description }));
+      const products = HIDE_PUBLIC_PRODUCTS ? [] : allProducts().filter(p => p.active).map(p => ({ name:p.name, category:p.category, type:p.type, description:p.description }));
       if (!process.env.OPENAI_API_KEY) {
         const ql = q.toLowerCase();
         const groups = ['clothing','jewellery','art','home-lifestyle'];
         const selected = groups.find(g => ql.includes(g.replace('-', ' ')) || ql.includes(g.split('-')[0])) || 'clothing';
-        const recs = allProducts().filter(p => p.category === selected).slice(0, 3).map(p => p.name);
+        const recs = HIDE_PUBLIC_PRODUCTS ? [] : allProducts().filter(p => p.category === selected).slice(0, 3).map(p => p.name);
         return json(res, 200, { mode:'preview', answer: recs.length ? `I can help you explore ${selected.replace('-', ' ')}. These pieces are currently listed as launch previews; prices and availability are still being confirmed.` : 'The ASRYO collection is in preview. Tell me whether you are browsing clothing, jewellery, art or home, and I can point you to the right edit.', suggestions: recs });
       }
       const response = await fetch('https://api.openai.com/v1/responses', {
