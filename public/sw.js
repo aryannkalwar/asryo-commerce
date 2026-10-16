@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'asryo-';
-const SHELL_CACHE = `${CACHE_PREFIX}offline-v1`;
-const DATA_CACHE = `${CACHE_PREFIX}public-data-v1`;
-const ASSET_CACHE = `${CACHE_PREFIX}assets-v1`;
+const SHELL_CACHE = `${CACHE_PREFIX}offline-v2`;
+const DATA_CACHE = `${CACHE_PREFIX}public-data-v2`;
+const ASSET_CACHE = `${CACHE_PREFIX}assets-v2`;
 const SHELL = [
-  '/', '/offline.html', '/style.css', '/luxury.css?v=offline-1', '/app.js?v=offline-1',
+  '/', '/offline.html', '/style.css', '/luxury.css?v=offline-1', '/app.js?v=products-hidden-2',
   '/manifest.webmanifest', '/asryo-mark.svg', '/track.html', '/track.js', '/policies.html', '/policies.js',
   '/assets/0a34172773b29f78.jpg', '/assets/6712e03dc0a4e0b8.jpg',
   '/assets/a6da0fa4a9da02ad.jpg', '/assets/4fe7a946315c6284.jpg', '/assets/d107b0fc7aed371c.jpg'
@@ -24,6 +24,7 @@ async function seedCatalog() {
   const assetsCache = await caches.open(ASSET_CACHE);
   const response = await cacheOne(dataCache, '/api/products');
   await cacheOne(dataCache, '/api/status');
+  // Do not precache catalog images while all public listings are hidden.
   if (!response?.ok) return;
 
   try {
