@@ -37,7 +37,8 @@ function startServer(storeReady) {
     cwd: project,
     env: {
       ...process.env, PORT: String(port), DATA_DIR: dataDir, NODE_ENV: 'test',
-      STORE_READY: String(storeReady), APP_ORIGIN: base,
+      STORE_READY: String(storeReady), APP_ORIGIN: base, HIDE_PUBLIC_PRODUCTS: 'false',
+      RESEND_API_KEY: '', MAIL_FROM: '',
       RAZORPAY_KEY_ID: '', RAZORPAY_KEY_SECRET: '', RAZORPAY_WEBHOOK_SECRET: '',
       ADMIN_EMAIL: adminEmail, ADMIN_PASSWORD: adminPassword,
     },
@@ -86,6 +87,26 @@ try {
   assert(products.every(p => !p.active), 'preview items remain unavailable for purchase');
   assert.equal(adminPage.status, 200, 'admin page loads');
   assert.equal(trackPage.status, 200, 'tracking page loads');
+  for (const path of ['/speed-division.html','/dream-future.html','/unsubscribe.html','/early-access-confirmed.html','/product.css','/product-page.js','/speed.css']){
+    const resource=await fetch(base+path);
+    assert.equal(resource.status,200,path+' is served');
+  }
+  const speedPage=await (await fetch(base+'/speed-division.html')).text();
+  assert.match(speedPage,/Size guide/);
+  assert.match(speedPage,/DESIGN PREVIEW \/ NOT FOR SALE/);
+  assert.match(speedPage,/asryo-speed-division-back.webp/);
+  const homePage=await (await fetch(base+'/')).text();
+  assert.match(homePage,/href="\/speed-division.html"/);
+  assert.match(homePage,/href="\/dream-future.html"/);
+  assert.match(homePage,/id="faq"/);
+  const earlyStatus=await (await fetch(base+'/api/early-access/status')).json();
+  assert.equal(earlyStatus.enabled,false,'early access is gated until verified email configured');
+  const noMail=await fetch(base+'/api/early-access',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({email:'buyer@example.test',consent:true})});
+  assert.equal(noMail.status,503,'email addresses are not accepted when verification email is absent');
+  const unauthorizedWaitlist=await fetch(base+'/api/admin/early-access');
+  assert.equal(unauthorizedWaitlist.status,401,'early-access contact list is admin-only');
+  const unsubWrongOrigin=await fetch(base+'/api/early-access/unsubscribe',{method:'POST',headers:{Origin:'https://attacker.example','Content-Type':'application/json'},body:'{}'});
+  assert.equal(unsubWrongOrigin.status,403,'early access unsubscribe rejects cross-origin writes');
 
   const blockedCheckout = await fetch(`${base}/api/checkout/orders`, {
     method: 'POST', headers: { Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify({ items: [] }),
