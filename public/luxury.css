@@ -77,3 +77,22 @@ body{background:#f4f3ef;color:#151515}
 .luxury-signature{background:#171717;color:white}
 .footer{background:#e9e8e3}
 @media(max-width:760px){.asryo-pillars{grid-template-columns:1fr}.asryo-pillars article{min-height:auto;padding:34px 8%}.asryo-pillars h3{margin:20px 0 10px}.hero{min-height:0}.hero-copy{padding:68px 7% 45px}.hero-image{min-height:410px;height:410px}.hero h1{font-size:clamp(65px,15vw,105px)}.brand{font-size:30px}.site-header nav{gap:14px}.site-header nav a{font-size:8px}.category-strip a{font-size:11px}}
+
+
+/* ASRYO visual journal */
+.asryo-gallery{background:#171717;color:#f6f5f1;padding:90px clamp(18px,5.4vw,90px) 65px}
+.asryo-gallery-heading{display:flex;justify-content:space-between;align-items:end;gap:30px;margin-bottom:34px}
+.asryo-gallery-heading h2{font:900 clamp(46px,6.2vw,96px)/.91 Impact,"Arial Narrow",Arial,sans-serif;letter-spacing:-.05em;margin:0}
+.asryo-gallery-heading .kicker{color:#b6b6b0}
+.asryo-gallery-heading>p{max-width:270px;color:#ccc;font-size:13px;line-height:1.7}
+.asryo-gallery-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:275px;gap:12px}
+.asryo-gallery-item{position:relative;margin:0;overflow:hidden;background:#343434}
+.asryo-gallery-item.tall{grid-row:span 2}
+.asryo-gallery-item.wide{grid-column:span 2}
+.asryo-gallery-item img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(.65);transition:transform .6s ease,filter .6s ease}
+.asryo-gallery-item:hover img{transform:scale(1.035);filter:grayscale(.1)}
+.asryo-gallery-item:after{content:"";position:absolute;inset:40% 0 0;background:linear-gradient(transparent,#0008);pointer-events:none}
+.asryo-gallery-item figcaption{position:absolute;z-index:1;bottom:22px;left:22px;font-size:10px;font-weight:800;letter-spacing:.17em}
+.asryo-gallery-credit{font-size:10px;color:#a7a7a2;margin:23px 0 0;line-height:1.8}
+.asryo-gallery-credit a{color:#d0d0ca}
+@media(max-width:760px){.asryo-gallery{padding:60px 6% 42px}.asryo-gallery-heading{display:block}.asryo-gallery-heading>p{margin-top:18px}.asryo-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:210px;gap:8px}.asryo-gallery-item.tall{grid-row:span 2}.asryo-gallery-item.wide{grid-column:span 1}.asryo-gallery-item figcaption{font-size:8px;left:12px;bottom:12px}}
