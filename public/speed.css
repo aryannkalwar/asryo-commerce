@@ -95,3 +95,27 @@ body.asryo-racing{background:var(--race-bg);color:#f4f4f6;color-scheme:dark;font
 @media(max-width:1050px){.asryo-racing .site-header{flex-wrap:wrap}.asryo-racing .site-header nav{order:3;width:100%;padding:12px 0 0;justify-content:space-between;border-top:1px solid #ffffff22;overflow-x:auto}.asryo-racing .speed-hero{grid-template-columns:1fr}.asryo-racing .speed-hero-content{padding:65px 7% 35px}.asryo-racing .speed-hero h1{font-size:clamp(73px,12vw,120px)}.asryo-racing .speed-hero-visual{height:490px}.asryo-racing .speed-collection-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px){.asryo-racing .announce{justify-content:center;text-align:center}.asryo-racing .announce span:first-child{display:none}.asryo-racing .site-header .brand{font-size:31px}.asryo-racing .site-header nav{gap:16px}.asryo-racing .site-header nav a{font-size:9px}.asryo-racing .header-actions{margin-left:auto}.asryo-racing .speed-hero-content{padding:43px 6% 29px}.asryo-racing .speed-kicker{font-size:9px}.asryo-racing .speed-hero h1{font-size:clamp(59px,13.5vw,90px)}.asryo-racing .speed-hero .speed-deck{font-size:12px}.asryo-racing .speed-hero-visual{height:360px}.asryo-racing .speed-hero-foot{margin-top:23px}.asryo-racing .speed-section{padding:59px 5%}.asryo-racing .speed-section-head{display:block}.asryo-racing .speed-section-head h2{font-size:48px}.asryo-racing .speed-section-head>p{margin-top:15px}.asryo-racing .speed-collection-grid,.asryo-racing .speed-products-grid{grid-template-columns:1fr}.asryo-racing .speed-collection-card{min-height:210px}.asryo-racing .speed-drop-band{align-items:flex-start;flex-direction:column}.asryo-racing .speed-story{grid-template-columns:1fr;gap:30px}.asryo-racing .speed-story img{max-height:520px}.asryo-racing .speed-contact{display:block}.asryo-racing .speed-contact .speed-btn{margin-top:20px}.asryo-racing .speed-ticker{justify-content:flex-start;gap:8px 20px}.asryo-racing .speed-ticker span{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.asryo-racing .speed-product-photos img,.asryo-racing .speed-collection-card img{transition:none}}
+
+/* Launch-ready information components */
+.asryo-racing .speed-product-link{margin-top:18px;font-size:10px;min-height:43px;padding:12px 17px}
+.asryo-racing .speed-early{display:grid;grid-template-columns:1fr minmax(300px,.9fr);gap:6vw;align-items:center;background:linear-gradient(115deg,#450a16,#18191e 62%,#131417)}
+.asryo-racing .speed-early h2{font:900 clamp(47px,6vw,89px)/.91 Impact,"Arial Black",Arial,sans-serif;margin:15px 0 23px;letter-spacing:-.02em}
+.asryo-racing .speed-early>div>p:last-child{max-width:525px;color:#c9c9d0;line-height:1.8;font-size:14px}
+.asryo-racing .speed-early-form{display:grid;gap:12px;background:#101115ae;padding:29px;border:1px solid #ffffff3b;border-radius:8px}
+.asryo-racing .speed-early-form>label:first-child{font-size:12px;font-weight:850;color:white;letter-spacing:.13em;text-transform:uppercase}
+.asryo-racing .speed-early-form input[type=email]{width:100%;padding:16px 17px;border:1px solid #ffffff6c;border-radius:5px;background:#0d0f13;color:#fff;font-size:15px;min-height:51px}
+.asryo-racing .speed-early-form .speed-check{display:flex;gap:11px;font-size:12px;line-height:1.55;color:#e0dfe2}
+.asryo-racing .speed-check input{accent-color:#ef1735;flex:0 0 auto;width:16px;height:16px;margin-top:2px}
+.asryo-racing .speed-check a{color:#ffadb6}
+.asryo-racing .speed-early-form button:disabled{cursor:not-allowed;background:#696973;border-color:#696973}
+.asryo-racing .speed-message{min-height:25px;margin:0;color:#dedee4;font-size:12px;line-height:1.55}
+.asryo-racing .speed-honey{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.asryo-racing .speed-faq{background:#101115}
+.asryo-racing .speed-faq details{border-top:1px solid #ffffff36;padding:0 5px}
+.asryo-racing .speed-faq details:last-child{border-bottom:1px solid #ffffff36}
+.asryo-racing .speed-faq summary{padding:22px 10px;cursor:pointer;font-size:16px;font-weight:850;line-height:1.5;list-style-position:inside}
+.asryo-racing .speed-faq details[open] summary{color:#ff6676}
+.asryo-racing .speed-faq details p{max-width:720px;font-size:13px;line-height:1.8;color:#c8c8d0;margin:0 20px 22px}
+.asryo-racing .speed-faq details a{color:#ff99a5}
+@media(max-width:850px){.asryo-racing .speed-early{grid-template-columns:1fr;gap:24px}}
+@media(max-width:600px){.asryo-racing .speed-early-form{padding:22px}.asryo-racing .speed-early h2{font-size:clamp(46px,11vw,68px)}.asryo-racing .speed-faq summary{font-size:14px}}
