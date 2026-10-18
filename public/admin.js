@@ -7,5 +7,21 @@ async function renderOrders(){try{const {orders}=await api('/api/admin/orders');
 $('#adminLoginForm').addEventListener('submit',async event=>{event.preventDefault();const f=new FormData(event.currentTarget);const msg=$('#adminLoginMessage');try{await api('/api/admin/login',{method:'POST',body:JSON.stringify({email:f.get('email'),password:f.get('password')})});await showDashboard()}catch(error){msg.textContent=error.message}});
 $('#adminLogout').addEventListener('click',async()=>{await api('/api/admin/logout',{method:'POST',body:'{}'});location.reload()});
 $('#refreshAdmin').addEventListener('click',showDashboard);
-document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',async()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===button));const products=button.dataset.tab==='products';$('#productsPanel').hidden=!products;$('#ordersPanel').hidden=products;if(!products)await renderOrders()}));
+async function renderEarlyAccess(){
+  const box=$('#adminEarly'),count=$('#earlyCount');box.textContent='Loading verified signups…';
+  try{
+    const data=await api('/api/admin/early-access');
+    count.textContent=data.count+' verified, subscribed addresses';
+    box.innerHTML=data.subscribers.length?data.subscribers.map(x=>'<article class="admin-empty"><strong>'+esc(x.email)+'</strong><br>Confirmed '+esc(new Date(x.verifiedAt).toLocaleString('en-IN'))+'</article>').join(''):'<div class="admin-empty">No verified subscribers yet. Signup requires configured confirmation email.</div>';
+  }catch(error){count.textContent='';box.textContent=error.message}
+}
+document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',async()=>{
+  document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===button));
+  const tab=button.dataset.tab;
+  $('#productsPanel').hidden=tab!=='products';
+  $('#ordersPanel').hidden=tab!=='orders';
+  $('#earlyPanel').hidden=tab!=='early';
+  if(tab==='orders')await renderOrders();
+  if(tab==='early')await renderEarlyAccess();
+}));
 showDashboard();
