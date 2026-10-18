@@ -1,0 +1,97 @@
+/* ASRYO: Speed Meets Street. Real preview images, no unverified offers or prices. */
+:root{--race-bg:#090a0d;--race-red:#ef1735;--race-panel:#16181d}
+body.asryo-racing{background:var(--race-bg);color:#f4f4f6;color-scheme:dark;font-family:"Segoe UI",Arial,sans-serif}
+.asryo-racing ::selection{background:var(--race-red);color:white}
+.asryo-racing :is(a,button):focus-visible{outline:3px solid #ff8391;outline-offset:3px}
+.asryo-racing .announce{background:linear-gradient(90deg,#36040d,#920f23 50%,#37050b);color:white;display:flex;justify-content:space-between;align-items:center;min-height:35px;padding:8px 5%;font-size:9px;font-weight:700;letter-spacing:.14em}
+.asryo-racing .announce span:first-child:after{display:none}
+.asryo-racing .site-header{display:flex;position:sticky;top:0;z-index:15;align-items:center;justify-content:space-between;gap:20px;background:#08090af5;color:#fff;border-bottom:1px solid #ffffff25;padding:14px 5%;min-height:76px;box-shadow:none;backdrop-filter:blur(18px)}
+.asryo-racing .site-header .brand,.asryo-racing .footer .brand{color:#fff;font:italic 950 38px/1 Impact,"Arial Black",Arial,sans-serif;letter-spacing:.02em;text-decoration:none;white-space:nowrap}
+.asryo-racing .site-header .brand span,.asryo-racing .footer .brand span{font:700 7px/1.5 "Segoe UI",Arial,sans-serif;letter-spacing:.2em;display:block;margin-top:5px}
+.asryo-racing .site-header nav{display:flex;align-items:center;gap:clamp(10px,2.5vw,35px);white-space:nowrap}
+.asryo-racing .site-header nav a{text-decoration:none;color:#ddd;font:650 11px/1.4 Arial,sans-serif;text-transform:uppercase;letter-spacing:.07em}
+.asryo-racing .site-header nav a:hover,.asryo-racing .site-header nav a:first-child{color:white}
+.asryo-racing .site-header nav a:first-child{border-bottom:2px solid var(--race-red);padding-bottom:7px}
+.asryo-racing .header-actions{display:flex;align-items:center;gap:9px}
+.asryo-racing .icon-button{border:1px solid #ffffff44;color:#fff;background:#191a1e;padding:9px 13px;border-radius:24px;font-size:10px;white-space:nowrap}
+.asryo-racing .bag-count{background:var(--race-red);color:white}
+.asryo-racing .speed-hero{display:grid;grid-template-columns:45% 55%;background:radial-gradient(circle at 65% 78%,#590913,transparent 39%),linear-gradient(115deg,#07080c,#181b20 72%,#260910);position:relative;isolation:isolate;min-height:640px;overflow:hidden}
+.asryo-racing .speed-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:repeating-linear-gradient(117deg,transparent 0 119px,#ffffff08 120px 121px,transparent 122px 240px)}
+.asryo-racing .speed-hero-content{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;position:relative;z-index:2;padding:70px 3vw 72px 8vw}
+.asryo-racing .speed-kicker{color:#dfdfe2;font-weight:850;font-size:10px;letter-spacing:.24em;margin:0 0 23px;text-transform:uppercase}
+.asryo-racing .speed-kicker:before{content:"";display:inline-block;width:22px;height:2px;background:var(--race-red);vertical-align:middle;margin-right:12px}
+.asryo-racing .speed-hero h1{font:italic 950 clamp(60px,7.4vw,128px)/.9 Impact,"Arial Black",Arial,sans-serif;color:#fff;letter-spacing:-.016em;text-transform:uppercase;margin:0 0 24px}
+.asryo-racing .speed-hero h1 em{display:block;color:var(--race-red);font-style:inherit}
+.asryo-racing .speed-hero .speed-deck{color:#d0d0d4;font-size:14px;line-height:1.7;max-width:400px;margin:0 0 27px}
+.asryo-racing .speed-actions{display:flex;flex-wrap:wrap;gap:12px}
+.asryo-racing .speed-btn{display:inline-flex;justify-content:center;align-items:center;gap:14px;padding:15px 24px;min-height:52px;text-decoration:none;background:var(--race-red);border:1px solid var(--race-red);color:#fff;border-radius:4px;font-weight:850;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.asryo-racing .speed-btn:hover{background:#c50725}
+.asryo-racing .speed-btn-ghost{background:#09090b80;border-color:#ffffff8c}
+.asryo-racing .speed-btn-ghost:hover{background:#27272f}
+.asryo-racing .speed-hero-foot{font-size:10px;line-height:1.6;letter-spacing:.15em;margin:42px 0 0;color:#d0cdd1}
+.asryo-racing .speed-hero-visual{display:grid;grid-template-columns:1fr 1fr;position:relative;height:640px}
+.asryo-racing .speed-hero-model{display:block;overflow:hidden;background:#282b2f;position:relative;height:100%}
+.asryo-racing .speed-hero-model img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block;filter:contrast(1.07) saturate(1.08)}
+.asryo-racing .speed-hero-visual:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#08090a80,transparent 15%,transparent 85%,#08090a55),linear-gradient(0deg,#08090a7a,transparent 40%);pointer-events:none}
+.asryo-racing .speed-hero-tag{position:absolute;bottom:20px;right:25px;z-index:2;border:1px solid #ffffff60;background:#0c0b10b8;padding:10px 13px;font-size:9px;font-weight:850;letter-spacing:.22em}
+.asryo-racing .speed-ticker{display:flex;justify-content:space-around;flex-wrap:wrap;gap:16px;padding:15px 5%;background:#141519;border-block:1px solid #ffffff21}
+.asryo-racing .speed-ticker span{font:800 10px/1.5 Arial,sans-serif;color:#d8d7dd;letter-spacing:.13em}
+.asryo-racing .speed-ticker b{color:#ff354f}
+.asryo-racing .speed-section{padding:85px 5.4%;background:#090a0d}
+.asryo-racing .speed-section-head{display:flex;justify-content:space-between;align-items:end;gap:24px;margin:0 0 30px}
+.asryo-racing .speed-overline{color:var(--race-red);letter-spacing:.2em;font-size:10px;font-weight:850;margin:0 0 10px}
+.asryo-racing .speed-section-head h2{font:950 clamp(40px,5vw,75px)/.96 Impact,Arial,sans-serif;text-transform:uppercase;margin:0}
+.asryo-racing .speed-section-head>p{font-size:13px;color:#aaaeb5;max-width:350px;line-height:1.7;margin:0}
+.asryo-racing .speed-collections{background:#0f1013}
+.asryo-racing .speed-collection-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.asryo-racing .speed-collection-card{display:block;position:relative;overflow:hidden;min-height:248px;background:linear-gradient(100deg,#5a0817,#22232b);border:1px solid #ffffff27;border-radius:8px;text-decoration:none;color:white}
+.asryo-racing .speed-collection-card:nth-child(2){background:linear-gradient(100deg,#272931,#0d0e12)}
+.asryo-racing .speed-collection-card:nth-child(3){background:linear-gradient(100deg,#380e19,#13171c)}
+.asryo-racing .speed-collection-card img{position:absolute;top:0;right:0;width:66%;height:100%;object-fit:cover;object-position:top;filter:saturate(.8);transition:transform .3s}
+.asryo-racing .speed-collection-card:hover img{transform:scale(1.04)}
+.asryo-racing .speed-collection-card:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#08090bdc 0%,#08090b89 52%,transparent 100%);pointer-events:none}
+.asryo-racing .speed-collection-card>div{position:absolute;left:22px;bottom:20px;z-index:2}
+.asryo-racing .speed-collection-card span{font:850 9px Arial,sans-serif;color:#ff8190;letter-spacing:.2em}
+.asryo-racing .speed-collection-card h3{font:900 27px/1 Impact,Arial,sans-serif;margin:9px 0;text-transform:uppercase}
+.asryo-racing .speed-collection-card p{font-size:12px;margin:0;max-width:190px;color:#e2e2e4}
+.asryo-racing .speed-drop-band{background:linear-gradient(100deg,#7c0b20,#130d12 65%);padding:26px 5.4%;display:flex;justify-content:space-between;align-items:center;gap:15px;border-block:1px solid #ffffff25}
+.asryo-racing .speed-drop-band strong{font:900 clamp(23px,3.5vw,48px)/1 Impact,Arial,sans-serif;letter-spacing:.02em}
+.asryo-racing .speed-drop-band em{color:#fa3550;font-style:normal}
+.asryo-racing .speed-drop-band span{letter-spacing:.17em;font-weight:800;font-size:10px}
+.asryo-racing .speed-products{background:#090a0d}
+.asryo-racing .speed-products-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.asryo-racing .speed-product{background:#17181c;border:1px solid #ffffff27;border-radius:8px;overflow:hidden}
+.asryo-racing .speed-product-photos{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.asryo-racing .speed-product-photos a{display:block;position:relative;aspect-ratio:4/5;overflow:hidden;background:#303239}
+.asryo-racing .speed-product-photos img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;transition:transform .3s}
+.asryo-racing .speed-product-photos a:hover img{transform:scale(1.04)}
+.asryo-racing .speed-product-photos small{position:absolute;bottom:12px;left:13px;border:1px solid #ffffff7b;background:#111b;padding:7px 10px;font-size:9px;font-weight:800;letter-spacing:.12em;color:white}
+.asryo-racing .speed-product-body{padding:23px}
+.asryo-racing .speed-product-body>span{color:#ff5d73;font:800 9px Arial,sans-serif;letter-spacing:.18em}
+.asryo-racing .speed-product-body h3{font:900 clamp(25px,2.4vw,37px)/1 Impact,Arial,sans-serif;margin:9px 0 12px;text-transform:uppercase}
+.asryo-racing .speed-product-body p{font-size:12px;line-height:1.65;color:#bdbdc5;margin:0 0 20px}
+.asryo-racing .speed-product-meta{border-top:1px solid #ffffff21;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:16px}
+.asryo-racing .speed-product-meta span{font-size:10px;font-weight:700;color:#ddd;letter-spacing:.1em}
+.asryo-racing .speed-product-meta strong{color:#ff6578;font-size:10px;letter-spacing:.13em}
+.asryo-racing .speed-lookbook{background:#121318}
+.asryo-racing .speed-lookbook-cover{display:block;border-radius:6px;overflow:hidden;border:1px solid #ffffff25}
+.asryo-racing .speed-lookbook-cover img{width:100%;height:auto;display:block}
+.asryo-racing .speed-lookbook-note{color:#b4b4bc;font-size:12px;margin:14px 0}
+.asryo-racing .speed-story{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:60px;background:linear-gradient(100deg,#0c0e12,#2b0c15)}
+.asryo-racing .speed-story img{display:block;width:100%;max-height:600px;aspect-ratio:4/5;object-fit:cover;object-position:top;border-radius:8px}
+.asryo-racing .speed-story h2{font:950 clamp(51px,6vw,94px)/.93 Impact,Arial,sans-serif;margin:15px 0 24px}
+.asryo-racing .speed-story h2 em{color:#f62341;font-style:normal}
+.asryo-racing .speed-story p{font-size:14px;line-height:1.8;color:#cfccd1;max-width:440px}
+.asryo-racing .speed-contact{display:flex;align-items:center;justify-content:space-between;gap:20px;background:#14151a;padding:42px 5.4%}
+.asryo-racing .speed-contact h2{font:900 39px Impact,Arial,sans-serif;margin:0 0 7px}
+.asryo-racing .speed-contact p{font-size:12px;color:#aaa;margin:0}
+.asryo-racing .collection-section.speed-hidden-system{display:none}
+.asryo-racing .footer{background:#06070a!important;border-top:1px solid #ffffff2b;color:#bfbfc5}
+.asryo-racing .footer p,.asryo-racing .footer small{color:#bfbfc5}
+.asryo-racing .footer a,.asryo-racing .footer button{color:#eee}
+.asryo-racing .assistant-launch{background:#ed1732;color:#fff}
+.asryo-racing .drawer,.asryo-racing .modal{background:#fbfaf8;color:#202025;color-scheme:light}
+.asryo-racing .drawer h2,.asryo-racing .modal h2{color:#202025}
+@media(max-width:1050px){.asryo-racing .site-header{flex-wrap:wrap}.asryo-racing .site-header nav{order:3;width:100%;padding:12px 0 0;justify-content:space-between;border-top:1px solid #ffffff22;overflow-x:auto}.asryo-racing .speed-hero{grid-template-columns:1fr}.asryo-racing .speed-hero-content{padding:65px 7% 35px}.asryo-racing .speed-hero h1{font-size:clamp(73px,12vw,120px)}.asryo-racing .speed-hero-visual{height:490px}.asryo-racing .speed-collection-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.asryo-racing .announce{justify-content:center;text-align:center}.asryo-racing .announce span:first-child{display:none}.asryo-racing .site-header .brand{font-size:31px}.asryo-racing .site-header nav{gap:16px}.asryo-racing .site-header nav a{font-size:9px}.asryo-racing .header-actions{margin-left:auto}.asryo-racing .speed-hero-content{padding:43px 6% 29px}.asryo-racing .speed-kicker{font-size:9px}.asryo-racing .speed-hero h1{font-size:clamp(59px,13.5vw,90px)}.asryo-racing .speed-hero .speed-deck{font-size:12px}.asryo-racing .speed-hero-visual{height:360px}.asryo-racing .speed-hero-foot{margin-top:23px}.asryo-racing .speed-section{padding:59px 5%}.asryo-racing .speed-section-head{display:block}.asryo-racing .speed-section-head h2{font-size:48px}.asryo-racing .speed-section-head>p{margin-top:15px}.asryo-racing .speed-collection-grid,.asryo-racing .speed-products-grid{grid-template-columns:1fr}.asryo-racing .speed-collection-card{min-height:210px}.asryo-racing .speed-drop-band{align-items:flex-start;flex-direction:column}.asryo-racing .speed-story{grid-template-columns:1fr;gap:30px}.asryo-racing .speed-story img{max-height:520px}.asryo-racing .speed-contact{display:block}.asryo-racing .speed-contact .speed-btn{margin-top:20px}.asryo-racing .speed-ticker{justify-content:flex-start;gap:8px 20px}.asryo-racing .speed-ticker span{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.asryo-racing .speed-product-photos img,.asryo-racing .speed-collection-card img{transition:none}}
