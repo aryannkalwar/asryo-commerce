@@ -15,7 +15,7 @@ mkdirSync(dataDir, { recursive: true });
 const db = new DatabaseSync(join(dataDir, 'asryo.sqlite'), { timeout: 5000 });
 const rateBuckets = new Map();
 // Keep archived products and past orders in SQLite, but publish no products until ASRYO relaunches.
-const HIDE_PUBLIC_PRODUCTS = true;
+const HIDE_PUBLIC_PRODUCTS = String(process.env.HIDE_PUBLIC_PRODUCTS ?? 'true').toLowerCase() !== 'false';
 db.exec(`
   PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = ON;
