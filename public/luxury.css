@@ -96,3 +96,23 @@ body{background:#f4f3ef;color:#151515}
 .asryo-gallery-credit{font-size:10px;color:#a7a7a2;margin:23px 0 0;line-height:1.8}
 .asryo-gallery-credit a{color:#d0d0ca}
 @media(max-width:760px){.asryo-gallery{padding:60px 6% 42px}.asryo-gallery-heading{display:block}.asryo-gallery-heading>p{margin-top:18px}.asryo-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:210px;gap:8px}.asryo-gallery-item.tall{grid-row:span 2}.asryo-gallery-item.wide{grid-column:span 1}.asryo-gallery-item figcaption{font-size:8px;left:12px;bottom:12px}}
+
+
+/* ASRYO Drop 001 — editorial tee index */
+.asryo-tee-section{padding:95px clamp(18px,5.5vw,90px);background:#f3f1eb;color:#171717}
+.asryo-tee-heading{display:flex;justify-content:space-between;align-items:end;gap:35px;margin-bottom:37px}
+.asryo-tee-heading h2{font:900 clamp(50px,6.5vw,104px)/.88 Impact,"Arial Narrow",Arial,sans-serif;letter-spacing:-.055em;margin:0}
+.asryo-tee-heading>p{max-width:330px;color:#595954;font-size:13px;line-height:1.7}
+.asryo-tee-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:30px 14px}
+.asryo-tee-card{min-width:0}
+.asryo-tee-photo{position:relative;aspect-ratio:3/4;overflow:hidden;background:#dedcd6}
+.asryo-tee-photo img{width:100%;height:100%;object-fit:cover;object-position:center;filter:grayscale(.4);transition:transform .35s}
+.asryo-tee-card:hover img{transform:scale(1.04)}
+.asryo-tee-number{position:absolute;top:11px;left:11px;background:#f8f6f0;color:#171717;padding:5px 8px;font-size:9px;font-weight:700}
+.asryo-tee-meta{padding-top:13px}
+.asryo-tee-meta h3{font:800 14px/1.35 Arial,sans-serif;letter-spacing:-.015em;margin:0 0 5px}
+.asryo-tee-meta p{font-size:11px;color:#686861;margin:0 0 12px}
+.asryo-tee-meta span{font-size:9px;letter-spacing:.14em;font-weight:800}
+.asryo-tee-disclaimer{font-size:11px;color:#666;margin:30px 0 0}
+@media(max-width:1050px){.asryo-tee-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:680px){.asryo-tee-section{padding:60px 6%}.asryo-tee-heading{display:block}.asryo-tee-heading>p{margin-top:16px}.asryo-tee-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:23px 11px}.asryo-tee-meta h3{font-size:12px}}
