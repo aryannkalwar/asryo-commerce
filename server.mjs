@@ -94,7 +94,7 @@ for (const item of catalog) {
 const mime = {
   '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8',
   '.json':'application/json; charset=utf-8', '.webmanifest':'application/manifest+json; charset=utf-8', '.svg':'image/svg+xml', '.jpg':'image/jpeg', '.jpeg':'image/jpeg',
-  '.png':'image/png', '.webp':'image/webp', '.ico':'image/x-icon', '.xml':'application/xml; charset=utf-8',
+  '.png':'image/png', '.webp':'image/webp', '.ico':'image/x-icon', '.txt':'text/plain; charset=utf-8', '.xml':'application/xml; charset=utf-8',
 };
 
 function setHeaders(res, contentType = 'application/json; charset=utf-8') {
