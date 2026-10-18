@@ -123,3 +123,28 @@ body{background:#f4f3ef;color:#151515}
 .asryo-tee-card:hover .asryo-tee-photo img{transform:scale(1.015);transform-origin:top left}
 .tee-look-01{--look-col:0;--look-top:-42%}.tee-look-02{--look-col:1;--look-top:-42%}.tee-look-03{--look-col:2;--look-top:-42%}.tee-look-04{--look-col:3;--look-top:-42%}.tee-look-05{--look-col:4;--look-top:-42%}
 .tee-look-06{--look-col:0;--look-top:-208%}.tee-look-07{--look-col:1;--look-top:-208%}.tee-look-08{--look-col:2;--look-top:-208%}.tee-look-09{--look-col:3;--look-top:-208%}.tee-look-10{--look-col:4;--look-top:-208%}
+
+
+/* ASRYO / editorial surface refresh — October 2026 */
+:root{--paper:#ebe8e1;--cream:#f7f5f0;--ink:#171717;--line:#d8d3ca}
+body{background:#f7f5f0}
+.site-header{background:rgba(249,248,245,.96)}
+.hero,.street-hero{background:#e9e5dd}
+.hero-copy{background:linear-gradient(130deg,#f5f2eb 0%,#ebe6dc 100%)}
+.hero-image{background:#c9c4bb}
+.editorial-intro{background:#f7f5f0}
+.asryo-pillars{background:#d4d0c8;border-color:#d4d0c8}
+.asryo-pillars article{background:#eeebe4}
+.drop-preview{background:#e7e4dc}
+.drop-preview-poster{background:#dbd7cd}
+.asryo-gallery{background:#1a1a1a}
+.asryo-gallery-item{background:#2b2b2b}
+.asryo-tee-section{background:#f4f1e9}
+.asryo-tee-photo{background:#e1ded6}
+.asryo-tee-card{background:transparent}
+.collection-section{background:#f7f5f0}
+.story{background:#e4e0d7}
+.story-copy{background:#eae6df}
+.service-section{background:#f5f2eb}
+.footer{background:#e6e2da}
+@media(max-width:760px){.hero-copy{background:#f2eee7}.asryo-tee-section{background:#f4f1e9}}
