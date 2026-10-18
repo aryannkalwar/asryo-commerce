@@ -148,3 +148,20 @@ body{background:#f7f5f0}
 .service-section{background:#f5f2eb}
 .footer{background:#e6e2da}
 @media(max-width:760px){.hero-copy{background:#f2eee7}.asryo-tee-section{background:#f4f1e9}}
+
+/* ASRYO Dream Future product preview. Visual-only listing; no checkout links. */
+.asryo-feature-product{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(270px,1.04fr);gap:16px;align-items:stretch;margin:0 0 54px;padding:17px;background:#e9e4dc;border:1px solid #ded6cc}
+.asryo-feature-shot{position:relative;margin:0;min-width:0;background:#e3ded6;overflow:hidden}
+.asryo-feature-shot a{display:block;width:100%;height:100%}
+.asryo-feature-shot img{display:block;width:100%;height:100%;aspect-ratio:4/5;object-fit:cover;object-position:center;transition:transform .4s ease}
+.asryo-feature-shot a:hover img{transform:scale(1.025)}
+.asryo-feature-shot figcaption{position:absolute;bottom:13px;left:13px;padding:8px 11px;background:#f8f5eddf;color:#181818;font:700 9px/1 Arial,sans-serif;letter-spacing:.12em;pointer-events:none}
+.asryo-feature-copy{padding:clamp(16px,3vw,48px) clamp(12px,2.3vw,32px);display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+.asryo-feature-copy h3{font:900 clamp(46px,5.2vw,88px)/.89 Impact,'Arial Narrow',Arial,sans-serif;letter-spacing:-.045em;margin:18px 0 25px;color:#161313}
+.asryo-feature-copy h3 em{font-family:Georgia,serif;font-style:italic;font-weight:400;letter-spacing:-.07em}
+.asryo-feature-lede{font-size:13px;line-height:1.7;color:#333;max-width:370px;margin:0 0 18px}
+.asryo-feature-subtext{font-size:11px;line-height:1.7;color:#6a625c;margin:0 0 15px;max-width:380px}
+.asryo-feature-spec{display:flex;flex-wrap:wrap;gap:6px 15px;border-top:1px solid #c8beb2;padding-top:18px;margin-bottom:22px;color:#51483f;font-size:9px;letter-spacing:.08em;font-weight:700}
+.asryo-feature-status{display:inline-block;padding:11px 15px;color:#fff;background:#241c1b;font:700 9px/1 Arial,sans-serif;letter-spacing:.16em;margin-bottom:14px}
+@media(max-width:1000px){.asryo-feature-product{grid-template-columns:1fr 1fr}.asryo-feature-copy{grid-column:1/-1;padding:25px 14px}.asryo-feature-copy h3{font-size:clamp(50px,9vw,85px)}}
+@media(max-width:680px){.asryo-feature-product{gap:8px;padding:8px;margin-bottom:37px}.asryo-feature-shot figcaption{font-size:8px;left:7px;bottom:7px;padding:6px}.asryo-feature-copy{padding:20px 11px 26px}.asryo-feature-copy h3{font-size:clamp(43px,13vw,68px);margin:13px 0 18px}.asryo-feature-lede{font-size:12px}}

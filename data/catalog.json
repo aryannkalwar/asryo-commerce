@@ -387,5 +387,13 @@
     "type": "Oversized T-Shirt",
     "image": "asryo-drop-001-lookbook.webp",
     "description": "AI-generated concept preview. Black oversized tee with a moon-inspired back graphic. Exact fabric, size availability, final print and price are not yet confirmed. Not available to order."
+  },
+  {
+    "id": "asryo-dream-future-oversized-tee",
+    "name": "ASRYO Dream Future Oversized T-Shirt — Red",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-dream-front.webp",
+    "description": "Original ASRYO red oversized T-shirt design concept with small chest wordmark and a white typography-led back graphic. Front and back mockups shown on the storefront. This is an AI-generated design preview only; fabric, final print, sizes, price, production and stock are unconfirmed. Not available to order."
   }
 ]
