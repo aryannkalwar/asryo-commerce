@@ -43,10 +43,10 @@ async function load(){
   state.offlinePreview=!navigator.onLine;
   const results=await Promise.allSettled([api('/api/products'),api('/api/status')]);
   if(results[0].status==='fulfilled')state.products=results[0].value.products;
-  state.products=[];state.cart={};
   if(results[1].status==='fulfilled')state.status=results[1].value;
   state.offlinePreview=state.offlinePreview||!navigator.onLine||results.some(result=>result.status==='rejected');
-  const open=false;state.status.storeReady=false;
+  state.cart=state.status.storeReady ? readCart() : {};
+  const open=Boolean(state.status.storeReady && !state.offlinePreview);
   $('#announceStatus').textContent='New collection coming soon';
   $('#heroAvailability').textContent='Shopping is temporarily unavailable while we prepare the next collection.';
   $('#checkoutUnavailable').hidden=open;
