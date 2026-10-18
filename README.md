@@ -7,7 +7,7 @@
 - Consent-based, **double-opt-in** email signups: `/api/early-access/status` gates the frontend and `POST /api/early-access` requires an explicit consent checkbox. `GET /api/early-access/verify` confirms email; `POST /api/early-access/unsubscribe` opts out; the authenticated `GET /api/admin/early-access` returns confirmed, currently subscribed contacts. Data is stored in the same persistent SQLite volume.
 - The signup will **not accept addresses** without `RESEND_API_KEY`, `MAIL_FROM` and `APP_ORIGIN`. Configure a verified sender and check confirmation/unsubscribe flows on staging before turning on collection. Never send to pending/unconfirmed addresses.
 - Pre-launch FAQs and policies are clearly labelled provisional. No fake offers, pricing, shipping promises, inventory, ratings, customer testimonials, or payment-provider claims.
-- Page-specific social metadata, staging-origin canonical links, a sitemap, and a robots file. **Update canonical links, sitemap and `APP_ORIGIN` when the final domain is chosen for the public store.**
+- Page-specific social metadata, canonical URLs and a sitemap pointing to the Railway-verified `asryo.com` staging domain. **When transferring the domain to production, verify DNS/HTTPS and update `APP_ORIGIN` to the origin serving write requests.**
 - GitHub Actions `.github/workflows/verify.yml` runs `npm run check` on updates, including security and launch smoke checks.
 
 ### Domain and operations
