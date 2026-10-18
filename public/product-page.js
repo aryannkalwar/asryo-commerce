@@ -7,6 +7,8 @@ if(page){
       mainImg.src=btn.dataset.photo;
       mainImg.alt=btn.dataset.alt;
       largeLink.href=btn.dataset.photo;
+      largeLink.classList.toggle('detail-crop',btn.dataset.detailView==='true');
+      largeLink.setAttribute('aria-label',btn.dataset.detailView==='true'?'Open the original full-size photo':'Open larger product design image');
       document.querySelectorAll('[data-photo]').forEach(x=>x.setAttribute('aria-pressed',String(x===btn)));
     });
   }
