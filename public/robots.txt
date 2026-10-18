@@ -4,4 +4,4 @@ Disallow: /admin
 Disallow: /api/
 Disallow: /early-access-confirmed.html
 Disallow: /unsubscribe.html
-Sitemap: https://asryo-web-production.up.railway.app/sitemap.xml
+Sitemap: https://asryo.com/sitemap.xml
