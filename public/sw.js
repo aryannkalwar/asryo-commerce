@@ -1,12 +1,17 @@
 const CACHE_PREFIX = 'asryo-';
-const SHELL_CACHE = `${CACHE_PREFIX}offline-v3`;
-const DATA_CACHE = `${CACHE_PREFIX}public-data-v2`;
-const ASSET_CACHE = `${CACHE_PREFIX}assets-v3`;
+const SHELL_CACHE = `${CACHE_PREFIX}offline-v4`;
+const DATA_CACHE = `${CACHE_PREFIX}public-data-v3`;
+const ASSET_CACHE = `${CACHE_PREFIX}assets-v4`;
 const SHELL = [
-  '/', '/offline.html', '/style.css', '/luxury.css?v=drop-001-20261017', '/app.js?v=products-hidden-2',
-  '/manifest.webmanifest', '/asryo-mark.svg', '/track.html', '/track.js', '/policies.html', '/policies.js',
-  '/assets/asryo-drop-001-lookbook.webp', '/assets/0a34172773b29f78.jpg', '/assets/6712e03dc0a4e0b8.jpg',
-  '/assets/a6da0fa4a9da02ad.jpg', '/assets/4fe7a946315c6284.jpg', '/assets/d107b0fc7aed371c.jpg'
+  '/', '/offline.html', '/style.css', '/luxury.css?v=dream-future-20261018',
+  '/speed.css?v=asryo-speed-20261019', '/product.css?v=launch-readiness-1',
+  '/product-page.js?v=launch-readiness-1', '/app.js?v=products-hidden-2',
+  '/manifest.webmanifest','/asryo-mark.svg', '/track.html','/track.js',
+  '/policies.html','/policies.js', '/admin.html',
+  '/speed-division.html','/dream-future.html','/unsubscribe.html','/early-access-confirmed.html',
+  '/assets/asryo-drop-001-lookbook.webp',
+  '/assets/asryo-speed-division-front.webp','/assets/asryo-speed-division-back.webp',
+  '/assets/asryo-dream-front.webp','/assets/asryo-dream-back.webp'
 ];
 
 async function cacheOne(cache, request) {
