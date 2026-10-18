@@ -28,7 +28,7 @@ function renderProducts(){
   const term=$('#search').value.trim().toLowerCase();const category=$('#categoryFilter').value;
   const found=state.products.filter(p=>(category==='all'||p.category===category)&&(!term||`${p.name} ${p.category} ${p.type} ${p.description}`.toLowerCase().includes(term)));
   $('#resultCount').textContent=found.length ? `${found.length} ${found.length===1?'piece':'pieces'} in the edit` : '';
-  $('#productGrid').innerHTML=found.length?found.map(productCard).join(''):`<div class="empty-state"><p class="kicker">THE NEXT CHAPTER</p><h3>New collection coming soon.</h3><p class="muted">We are refreshing ASRYO. Products are not available for browsing or ordering right now.</p></div>`;
+  $('#productGrid').innerHTML=found.length?found.map(productCard).join(''):`<div class="empty-state"><p class="kicker">THE NEXT CHAPTER</p><h3>Drop 001 is on its way.</h3><p class="muted">The first ASRYO clothing release is in preview. Sizes, prices and stock will be confirmed before orders open.</p></div>`;
 }
 function renderCart(){
   const items=state.products.filter(p=>state.cart[p.id]);const count=items.reduce((sum,p)=>sum+state.cart[p.id],0);$('#bagCount').textContent=String(count);
@@ -47,12 +47,12 @@ async function load(){
   state.offlinePreview=state.offlinePreview||!navigator.onLine||results.some(result=>result.status==='rejected');
   state.cart=state.status.storeReady ? readCart() : {};
   const open=Boolean(state.status.storeReady && !state.offlinePreview);
-  $('#announceStatus').textContent='New collection coming soon';
-  $('#heroAvailability').textContent='Shopping is temporarily unavailable while we prepare the next collection.';
+  $('#announceStatus').textContent='Drop 001 — coming soon';
+  $('#heroAvailability').textContent='Drop 001 is in preview. Shopping opens once sizes and stock are confirmed.';
   $('#checkoutUnavailable').hidden=open;
   $('#checkoutForm').hidden=!open;
-  if(open){$('#announceStatus').textContent='Cash on delivery only';$('#heroAvailability').textContent='Thoughtful finds, ready to be yours.';$('#catalogIntro').textContent='Explore the ASRYO collection across clothing, jewellery, art and home.';$('#cartStatus').textContent='Cash on delivery only. Shipping is calculated at checkout.';}
-  else $('#catalogIntro').textContent='Our new ASRYO collection is coming soon. Products are temporarily unavailable.';
+  if(open){$('#announceStatus').textContent='Cash on delivery only';$('#heroAvailability').textContent='Thoughtful finds, ready to be yours.';$('#catalogIntro').textContent='Explore ASRYO streetwear and oversized essentials.';$('#cartStatus').textContent='Cash on delivery only. Shipping is calculated at checkout.';}
+  else $('#catalogIntro').textContent='Our first streetwear drop is in preview. Clothing is not yet available to order.';
   const contacts=[];if(state.status.supportPhone)contacts.push(`Call ASRYO at ${state.status.supportPhone}`);if(state.status.supportEmail)contacts.push(`email ${state.status.supportEmail}`);if(contacts.length)$('#supportLine').textContent=`Questions? ${contacts.join(' or ')}.`;
   $('#aiDisclosure').textContent=state.status.assistant?'Your question is sent to OpenAI to prepare a shopping reply. Please do not include payment details or sensitive personal information.':'Your message stays on this site while the assistant is in preview mode.';
   renderProducts();renderCart();
