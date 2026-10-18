@@ -1,0 +1,21 @@
+name: Verify ASRYO storefront
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Run syntax and API smoke tests
+        run: npm run check
