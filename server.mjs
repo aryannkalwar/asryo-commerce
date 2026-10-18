@@ -43,6 +43,17 @@ db.exec(`
     shipping_paise INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'INR',
     shipping_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS early_access (
+    email TEXT PRIMARY KEY,
+    consent_at TEXT NOT NULL,
+    verified_at TEXT,
+    verify_token_hash TEXT,
+    verify_expires_at INTEGER,
+    last_sent_at INTEGER,
+    unsubscribe_token_hash TEXT,
+    unsubscribed_at TEXT
+  );
+  CREATE INDEX IF NOT EXISTS early_access_verified ON early_access(verified_at);
   CREATE TABLE IF NOT EXISTS order_items (
     order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE, product_id TEXT NOT NULL,
     product_name TEXT NOT NULL, quantity INTEGER NOT NULL, unit_price_paise INTEGER NOT NULL,
@@ -290,6 +301,7 @@ async function handle(req, res) {
       '/api/auth/login': [8, 15*60*1000], '/api/auth/register': [5, 60*60*1000],
       '/api/admin/login': [8, 15*60*1000], '/api/assistant': [30, 60*1000],
       '/api/checkout/orders': [10, 15*60*1000],
+      '/api/early-access': [4, 60*60*1000],
     };
     if (req.method === 'POST' && limits[path] && !rateLimit(req, res, path, ...limits[path])) return;
 
@@ -298,6 +310,57 @@ async function handle(req, res) {
       const ready = !HIDE_PUBLIC_PRODUCTS && String(process.env.STORE_READY).toLowerCase() === 'true' && available > 0;
       return json(res, 200, { storeReady: ready, availableProducts: HIDE_PUBLIC_PRODUCTS ? 0 : available, paymentMethod: 'cash_on_delivery', assistant: Boolean(process.env.OPENAI_API_KEY), accountVerification: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM), supportEmail: process.env.PUBLIC_SUPPORT_EMAIL || null, supportPhone: process.env.PUBLIC_SUPPORT_PHONE || null, businessName: process.env.PUBLIC_BUSINESS_NAME || 'ASRYO' });
     }
+    if (req.method === 'GET' && path === '/api/early-access/status')
+      return json(res, 200, { enabled: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM && process.env.APP_ORIGIN), doubleOptIn:true });
+
+    if (req.method === 'POST' && path === '/api/early-access') {
+      const cfgReady=Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM && process.env.APP_ORIGIN);
+      if (!cfgReady) return json(res, 503, { error:'Early-access email confirmation is not available yet. Please check back soon.' });
+      const input = await jsonBody(req, 2048);
+      if (!input || typeof input !== 'object' || Array.isArray(input)) return json(res,400,{error:'Invalid signup request.'});
+      // Honeypot: accept silently but do not store automated submissions.
+      if (String(input.website || '').trim()) return json(res,202,{message:'If eligible, your confirmation email is on its way.'});
+      const email=String(input.email || '').trim().toLowerCase();
+      if (email.length > 254 || !/^[^\s@]{1,64}@[^\s@]+\.[^\s@]+$/.test(email) || input.consent !== true)
+        return json(res,400,{error:'Enter a valid email and agree to receive ASRYO launch updates.'});
+      const existing=db.prepare('SELECT verified_at,unsubscribed_at,last_sent_at FROM early_access WHERE email=?').get(email);
+      if (existing?.verified_at && !existing.unsubscribed_at) return json(res,202,{message:'If eligible, your confirmation email is on its way.'});
+      if (existing?.last_sent_at && Date.now()-existing.last_sent_at < 60*60*1000)
+        return json(res,202,{message:'If eligible, your confirmation email is on its way.'});
+      const token=randomBytes(32).toString('hex');
+      const unsubscribeToken=randomBytes(32).toString('hex');
+      const href=publicBase('/api/early-access/verify?token='+encodeURIComponent(token));
+      const unsub=publicBase('/unsubscribe.html?token='+encodeURIComponent(unsubscribeToken));
+      const result=await fetch('https://api.resend.com/emails',{
+        method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({from:process.env.MAIL_FROM,to:[email],subject:'Confirm your ASRYO Drop 001 early access',html:'<p>You asked to hear about the ASRYO Drop 001 release.</p><p><a href="'+href+'">Confirm my email</a></p><p>This link expires in 24 hours. If you did not request this, ignore this email.</p><p>You can <a href="'+unsub+'">unsubscribe</a> at any time.</p>'})
+      }).catch(()=>null);
+      if(!result?.ok) return json(res,503,{error:'Confirmation email could not be sent. Please try later.'});
+      const at=now();
+      db.prepare(`INSERT INTO early_access(email,consent_at,verified_at,verify_token_hash,verify_expires_at,last_sent_at,unsubscribe_token_hash,unsubscribed_at)
+        VALUES(?,?,?,?,?,?,?,NULL) ON CONFLICT(email) DO UPDATE SET
+        consent_at=excluded.consent_at, verified_at=NULL, verify_token_hash=excluded.verify_token_hash,
+        verify_expires_at=excluded.verify_expires_at,last_sent_at=excluded.last_sent_at,
+        unsubscribe_token_hash=excluded.unsubscribe_token_hash,unsubscribed_at=NULL`)
+        .run(email,at,null,hash(token),Date.now()+24*60*60*1000,Date.now(),hash(unsubscribeToken));
+      return json(res,202,{message:'Check your inbox and confirm your email to join the early-access list.'});
+    }
+    if (req.method === 'GET' && path === '/api/early-access/verify') {
+      const token=url.searchParams.get('token')||'';
+      if (!/^[a-f0-9]{64}$/.test(token)) return json(res,400,{error:'Invalid or expired confirmation link.'});
+      const item=db.prepare('SELECT email FROM early_access WHERE verify_token_hash=? AND verify_expires_at>? AND unsubscribed_at IS NULL').get(hash(token),Date.now());
+      if(!item) return json(res,400,{error:'Invalid or expired confirmation link.'});
+      db.prepare('UPDATE early_access SET verified_at=?,verify_token_hash=NULL,verify_expires_at=NULL WHERE email=?').run(now(),item.email);
+      res.statusCode=303;res.setHeader('Location','/early-access-confirmed.html');return res.end();
+    }
+    if (req.method === 'POST' && path === '/api/early-access/unsubscribe') {
+      const input=await jsonBody(req,1024);
+      const token=String(input?.token||'');
+      if(!/^[a-f0-9]{64}$/.test(token)) return json(res,400,{error:'Invalid unsubscribe link.'});
+      db.prepare('UPDATE early_access SET unsubscribed_at=?,verified_at=NULL,verify_token_hash=NULL,verify_expires_at=NULL WHERE unsubscribe_token_hash=?').run(now(),hash(token));
+      return json(res,200,{message:'You have been unsubscribed from ASRYO launch updates.'});
+    }
+
     if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: HIDE_PUBLIC_PRODUCTS ? [] : allProducts() });
 
     if (req.method === 'POST' && path === '/api/assistant') {
@@ -380,6 +443,11 @@ async function handle(req, res) {
     if (req.method === 'POST' && path === '/api/admin/logout') {
       const raw=cookies(req).asryo_admin; if(raw) db.prepare('DELETE FROM admin_sessions WHERE token_hash=?').run(hash(raw));
       clearCookie(res,'asryo_admin'); return json(res,200,{ok:true});
+    }
+    if (req.method === 'GET' && path === '/api/admin/early-access') {
+      const count=db.prepare('SELECT COUNT(*) n FROM early_access WHERE verified_at IS NOT NULL AND unsubscribed_at IS NULL').get().n;
+      const subscribers=db.prepare('SELECT email,verified_at AS verifiedAt FROM early_access WHERE verified_at IS NOT NULL AND unsubscribed_at IS NULL ORDER BY verified_at DESC LIMIT 1000').all();
+      return json(res,200,{count,subscribers});
     }
     if (req.method === 'GET' && path === '/api/admin/products') return json(res,200,{products:allProducts()});
     if (req.method === 'PATCH' && path.startsWith('/api/admin/products/')) {
