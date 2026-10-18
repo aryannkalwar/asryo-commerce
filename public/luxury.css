@@ -116,3 +116,10 @@ body{background:#f4f3ef;color:#151515}
 .asryo-tee-disclaimer{font-size:11px;color:#666;margin:30px 0 0}
 @media(max-width:1050px){.asryo-tee-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:680px){.asryo-tee-section{padding:60px 6%}.asryo-tee-heading{display:block}.asryo-tee-heading>p{margin-top:16px}.asryo-tee-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:23px 11px}.asryo-tee-meta h3{font-size:12px}}
+
+
+/* Distinct framed sections of the ASRYO Drop 001 lookbook while independent image assets await upload. */
+.asryo-tee-photo img{position:absolute;width:530%;max-width:none;height:auto;object-fit:unset;filter:none;left:calc(var(--look-col,0)*-106%);top:var(--look-top,-42%);transition:transform .35s ease}
+.asryo-tee-card:hover .asryo-tee-photo img{transform:scale(1.015);transform-origin:top left}
+.tee-look-01{--look-col:0;--look-top:-42%}.tee-look-02{--look-col:1;--look-top:-42%}.tee-look-03{--look-col:2;--look-top:-42%}.tee-look-04{--look-col:3;--look-top:-42%}.tee-look-05{--look-col:4;--look-top:-42%}
+.tee-look-06{--look-col:0;--look-top:-208%}.tee-look-07{--look-col:1;--look-top:-208%}.tee-look-08{--look-col:2;--look-top:-208%}.tee-look-09{--look-col:3;--look-top:-208%}.tee-look-10{--look-col:4;--look-top:-208%}
