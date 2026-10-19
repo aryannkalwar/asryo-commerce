@@ -6,6 +6,6 @@
   "engines": { "node": ">=22.16.0" },
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check public/app.js && node --check public/admin.js && node --check public/track.js && node --check public/policies.js && node scripts/smoke.mjs"
+    "check": "node --check server.mjs && node --check public/app.js && node --check public/concept-visuals.js && node --check public/admin.js && node --check public/track.js && node --check public/policies.js && node scripts/smoke.mjs"
   }
 }
