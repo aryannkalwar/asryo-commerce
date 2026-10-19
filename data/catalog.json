@@ -403,5 +403,155 @@
     "type": "Oversized T-Shirt",
     "image": "asryo-speed-division-front.webp",
     "description": "Original ASRYO motorsport-inspired red oversized T-shirt design with small Speed Division chest branding, original front racing-car line art and matching back racetrack graphics. Separate front and back AI-generated mockups are on the storefront. This is a design preview only; fabric weight, printing, production, confirmed size range, price and stock are not yet verified. Not available to order."
+  },
+  {
+    "id": "asryo-lookbook-essential",
+    "name": "ASRYO Essential Oversized T-Shirt — Jet Black",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-essential-front.webp",
+    "description": "A crisp ASRYO chest mark and a restrained luminous cross on the back. Understated, clean and timeless. Front and back images are extracted from the supplied ASRYO concept lookbook. Lookbook-indicated price ₹899 (not a confirmed selling price). Proposed M, L and XL sizes are unconfirmed. Artwork concept only; material, production, stock and fulfillment unverified. Not available to order.",
+    "lookbookReferencePricePaise": 89900,
+    "proposedSizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "backImage": "asryo-essential-back.webp"
+  },
+  {
+    "id": "asryo-lookbook-minimal",
+    "name": "ASRYO Minimal Oversized T-Shirt — Off White",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-minimal-front.webp",
+    "description": "Soft off-white minimal front branding meets expressive monochrome mountain-inspired artwork on the back. Front and back images are extracted from the supplied ASRYO concept lookbook. Lookbook-indicated price ₹899 (not a confirmed selling price). Proposed M, L and XL sizes are unconfirmed. Artwork concept only; material, production, stock and fulfillment unverified. Not available to order.",
+    "lookbookReferencePricePaise": 89900,
+    "proposedSizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "backImage": "asryo-minimal-back.webp"
+  },
+  {
+    "id": "asryo-lookbook-vision",
+    "name": "ASRYO Vision Oversized T-Shirt — Washed Charcoal",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-vision-front.webp",
+    "description": "A faded charcoal concept with a textured city-inspired vertical artwork and typographic graphic on the back. Front and back images are extracted from the supplied ASRYO concept lookbook. Lookbook-indicated price ₹999 (not a confirmed selling price). Proposed M, L and XL sizes are unconfirmed. Artwork concept only; material, production, stock and fulfillment unverified. Not available to order.",
+    "lookbookReferencePricePaise": 99900,
+    "proposedSizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "backImage": "asryo-vision-back.webp"
+  },
+  {
+    "id": "asryo-lookbook-ascend",
+    "name": "ASRYO Ascend Oversized T-Shirt — Beige",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-ascend-front.webp",
+    "description": "Quiet neutral beige paired with abstract mountain scenery and a circular sun motif. Made for an exploratory point of view. Front and back images are extracted from the supplied ASRYO concept lookbook. Lookbook-indicated price ₹999 (not a confirmed selling price). Proposed M, L and XL sizes are unconfirmed. Artwork concept only; material, production, stock and fulfillment unverified. Not available to order.",
+    "lookbookReferencePricePaise": 99900,
+    "proposedSizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "backImage": "asryo-ascend-back.webp"
+  },
+  {
+    "id": "asryo-lookbook-midnight",
+    "name": "ASRYO Midnight Oversized T-Shirt — Navy",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-midnight-front.webp",
+    "description": "Midnight navy with an atmospheric cloud-and-sky panel on the back: same sky, different stories. Front and back images are extracted from the supplied ASRYO concept lookbook. Lookbook-indicated price ₹999 (not a confirmed selling price). Proposed M, L and XL sizes are unconfirmed. Artwork concept only; material, production, stock and fulfillment unverified. Not available to order.",
+    "lookbookReferencePricePaise": 99900,
+    "proposedSizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "backImage": "asryo-midnight-back.webp"
+  },
+  {
+    "id": "asryo-lookbook-rebel",
+    "name": "ASRYO Rebel Oversized T-Shirt — Washed Brown",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-rebel-front.webp",
+    "description": "Vintage washed-brown treatment with expressive brush marks and a strong independent-streetwear attitude. Front and back images are extracted from the supplied ASRYO concept lookbook. Lookbook-indicated price ₹1,099 (not a confirmed selling price). Proposed M, L and XL sizes are unconfirmed. Artwork concept only; material, production, stock and fulfillment unverified. Not available to order.",
+    "lookbookReferencePricePaise": 109900,
+    "proposedSizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "backImage": "asryo-rebel-back.webp"
+  },
+  {
+    "id": "asryo-lookbook-static",
+    "name": "ASRYO Static Oversized T-Shirt — Steel Grey",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-static-front.webp",
+    "description": "A steel-grey oversized silhouette featuring tonal fine-line topography and movement-inspired artwork. Front and back images are extracted from the supplied ASRYO concept lookbook. Lookbook-indicated price ₹999 (not a confirmed selling price). Proposed M, L and XL sizes are unconfirmed. Artwork concept only; material, production, stock and fulfillment unverified. Not available to order.",
+    "lookbookReferencePricePaise": 99900,
+    "proposedSizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "backImage": "asryo-static-back.webp"
+  },
+  {
+    "id": "asryo-lookbook-eclipse",
+    "name": "ASRYO Eclipse Oversized T-Shirt — Olive Green",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-eclipse-front.webp",
+    "description": "Earth-toned olive green, a celestial eclipse motif and a distant landscape graphic. Built around progress. Front and back images are extracted from the supplied ASRYO concept lookbook. Lookbook-indicated price ₹1,099 (not a confirmed selling price). Proposed M, L and XL sizes are unconfirmed. Artwork concept only; material, production, stock and fulfillment unverified. Not available to order.",
+    "lookbookReferencePricePaise": 109900,
+    "proposedSizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "backImage": "asryo-eclipse-back.webp"
+  },
+  {
+    "id": "asryo-lookbook-after-hours",
+    "name": "ASRYO After Hours Oversized T-Shirt — Burgundy",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-after-hours-front.webp",
+    "description": "Deep burgundy meets a night-time skyline, moonlight and understated urban typography. Front and back images are extracted from the supplied ASRYO concept lookbook. Lookbook-indicated price ₹1,299 (not a confirmed selling price). Proposed M, L and XL sizes are unconfirmed. Artwork concept only; material, production, stock and fulfillment unverified. Not available to order.",
+    "lookbookReferencePricePaise": 129900,
+    "proposedSizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "backImage": "asryo-after-hours-back.webp"
+  },
+  {
+    "id": "asryo-lookbook-origin-limited",
+    "name": "ASRYO Origin Limited Oversized T-Shirt — Bone White",
+    "category": "clothing",
+    "type": "Oversized T-Shirt",
+    "image": "asryo-origin-limited-front.webp",
+    "description": "A clean bone-white front and sweeping dark ink-line artwork across the back, defining the origin chapter. Front and back images are extracted from the supplied ASRYO concept lookbook. Lookbook-indicated price ₹1,299 (not a confirmed selling price). Proposed M, L and XL sizes are unconfirmed. Artwork concept only; material, production, stock and fulfillment unverified. Not available to order.",
+    "lookbookReferencePricePaise": 129900,
+    "proposedSizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "backImage": "asryo-origin-limited-back.webp"
   }
 ]

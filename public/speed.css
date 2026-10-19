@@ -119,3 +119,28 @@ body.asryo-racing{background:var(--race-bg);color:#f4f4f6;color-scheme:dark;font
 .asryo-racing .speed-faq details a{color:#ff99a5}
 @media(max-width:850px){.asryo-racing .speed-early{grid-template-columns:1fr;gap:24px}}
 @media(max-width:600px){.asryo-racing .speed-early-form{padding:22px}.asryo-racing .speed-early h2{font-size:clamp(46px,11vw,68px)}.asryo-racing .speed-faq summary{font-size:14px}}
+
+/* DROP 001 — THE TEN: 20 actual image crops from the user's 10-design ASRYO concept lookbook. */
+.asryo-racing .asryo-ten{background:#111217;color:#f5f5f7}
+.asryo-racing .asryo-ten-disclaimer{font:500 12px/1.85 "Segoe UI",Arial,sans-serif;color:#bfc0c6;border-left:3px solid #f12b45;padding:12px 18px;background:#ffffff0b;margin:0 0 29px}
+.asryo-racing .asryo-ten-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.asryo-racing .asryo-ten-card{background:#1c1e24;border:1px solid #ffffff26;border-radius:8px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
+.asryo-racing .asryo-ten-photos{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#e9e7e4}
+.asryo-racing .asryo-ten-photos a{position:relative;display:block;overflow:hidden;background:#e9e7e4;aspect-ratio:150/170}
+.asryo-racing .asryo-ten-photos img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .24s ease}
+.asryo-racing .asryo-ten-photos a:hover img{transform:scale(1.04)}
+.asryo-racing .asryo-ten-photos span{position:absolute;bottom:9px;left:8px;background:#0c0d11d9;color:#fff;padding:6px 8px;font:800 9px Arial,sans-serif;letter-spacing:.12em}
+.asryo-racing .asryo-ten-info{padding:19px 20px 22px;flex:1;display:flex;flex-direction:column}
+.asryo-racing .asryo-ten-number{font:850 9px Arial,sans-serif;letter-spacing:.2em;color:#ff7182;margin:0 0 8px;display:flex;justify-content:space-between;gap:10px}
+.asryo-racing .asryo-ten-number span{color:#d3d2d4;letter-spacing:.1em}
+.asryo-racing .asryo-ten-info h3{font:900 clamp(24px,2.3vw,34px)/1.1 Impact,"Arial Narrow",Arial,sans-serif;color:#f7f7f7;margin:0 0 7px}
+.asryo-racing .asryo-ten-color{font-size:11px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:#e2e0e5;margin:0 0 12px}
+.asryo-racing .asryo-ten-desc{font:400 12px/1.65 "Segoe UI",Arial,sans-serif;color:#bcbac3;margin:0 0 23px;flex:1}
+.asryo-racing .asryo-ten-bottom{display:flex;justify-content:space-between;align-items:end;gap:10px;border-top:1px solid #ffffff2b;padding-top:15px}
+.asryo-racing .asryo-ten-size{font-size:11px;color:#eee;font-weight:700;line-height:1.6}
+.asryo-racing .asryo-ten-size small{color:#aaa;font-weight:500}
+.asryo-racing .asryo-ten-price{font:900 24px/1 Impact,Arial,sans-serif;letter-spacing:.02em;color:#fff;text-align:right}
+.asryo-racing .asryo-ten-price small{font:600 9px/1.4 "Segoe UI",Arial,sans-serif;display:block;color:#ff7e8f;letter-spacing:.03em;margin-top:5px}
+.asryo-racing .asryo-ten-unavailable{font-size:9px;letter-spacing:.13em;color:#f1788b;margin:19px 0 0;font-weight:800}
+@media(max-width:1100px){.asryo-racing .asryo-ten-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.asryo-racing .asryo-ten-grid{grid-template-columns:1fr;gap:18px}.asryo-racing .asryo-ten-photos{max-height:350px}.asryo-racing .asryo-ten-photos a{aspect-ratio:150/170}.asryo-racing .asryo-ten-info{padding:17px}.asryo-racing .asryo-ten-info h3{font-size:29px}}
