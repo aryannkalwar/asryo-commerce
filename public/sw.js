@@ -1,7 +1,7 @@
 const CACHE_PREFIX = 'asryo-';
-const SHELL_CACHE = `${CACHE_PREFIX}offline-v4`;
+const SHELL_CACHE = `${CACHE_PREFIX}offline-v5`;
 const DATA_CACHE = `${CACHE_PREFIX}public-data-v3`;
-const ASSET_CACHE = `${CACHE_PREFIX}assets-v4`;
+const ASSET_CACHE = `${CACHE_PREFIX}assets-v5`;
 const SHELL = [
   '/', '/offline.html', '/style.css', '/luxury.css?v=dream-future-20261018',
   '/speed.css?v=image-fit-20261019', '/product.css?v=image-fit-20261019',
