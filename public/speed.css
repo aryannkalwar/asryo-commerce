@@ -63,8 +63,8 @@ body.asryo-racing{background:var(--race-bg);color:#f4f4f6;color-scheme:dark;font
 .asryo-racing .speed-product{background:#17181c;border:1px solid #ffffff27;border-radius:8px;overflow:hidden}
 .asryo-racing .speed-product-photos{display:grid;grid-template-columns:1fr 1fr;gap:2px}
 .asryo-racing .speed-product-photos a{display:block;position:relative;aspect-ratio:4/5;overflow:hidden;background:#303239}
-.asryo-racing .speed-product-photos img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;transition:transform .3s}
-.asryo-racing .speed-product-photos a:hover img{transform:scale(1.04)}
+.asryo-racing .speed-product-photos img{display:block;width:100%;height:100%;object-fit:contain;object-position:center;padding:6px;transition:transform .3s}
+.asryo-racing .speed-product-photos a:hover img{transform:scale(1.015)}
 .asryo-racing .speed-product-photos small{position:absolute;bottom:12px;left:13px;border:1px solid #ffffff7b;background:#111b;padding:7px 10px;font-size:9px;font-weight:800;letter-spacing:.12em;color:white}
 .asryo-racing .speed-product-body{padding:23px}
 .asryo-racing .speed-product-body>span{color:#ff5d73;font:800 9px Arial,sans-serif;letter-spacing:.18em}
@@ -127,8 +127,8 @@ body.asryo-racing{background:var(--race-bg);color:#f4f4f6;color-scheme:dark;font
 .asryo-racing .asryo-ten-card{background:#1c1e24;border:1px solid #ffffff26;border-radius:8px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
 .asryo-racing .asryo-ten-photos{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#e9e7e4}
 .asryo-racing .asryo-ten-photos a{position:relative;display:block;overflow:hidden;background:#e9e7e4;aspect-ratio:150/170}
-.asryo-racing .asryo-ten-photos img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .24s ease}
-.asryo-racing .asryo-ten-photos a:hover img{transform:scale(1.04)}
+.asryo-racing .asryo-ten-photos img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;padding:5px;transition:transform .24s ease}
+.asryo-racing .asryo-ten-photos a:hover img{transform:scale(1.015)}
 .asryo-racing .asryo-ten-photos span{position:absolute;bottom:9px;left:8px;background:#0c0d11d9;color:#fff;padding:6px 8px;font:800 9px Arial,sans-serif;letter-spacing:.12em}
 .asryo-racing .asryo-ten-info{padding:19px 20px 22px;flex:1;display:flex;flex-direction:column}
 .asryo-racing .asryo-ten-number{font:850 9px Arial,sans-serif;letter-spacing:.2em;color:#ff7182;margin:0 0 8px;display:flex;justify-content:space-between;gap:10px}
