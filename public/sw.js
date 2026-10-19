@@ -4,7 +4,7 @@ const DATA_CACHE = `${CACHE_PREFIX}public-data-v3`;
 const ASSET_CACHE = `${CACHE_PREFIX}assets-v4`;
 const SHELL = [
   '/', '/offline.html', '/style.css', '/luxury.css?v=dream-future-20261018',
-  '/speed.css?v=asryo-speed-20261019', '/product.css?v=launch-readiness-1',
+  '/speed.css?v=image-fit-20261019', '/product.css?v=image-fit-20261019',
   '/product-page.js?v=launch-readiness-1', '/app.js?v=products-hidden-2',
   '/manifest.webmanifest','/asryo-mark.svg', '/track.html','/track.js',
   '/policies.html','/policies.js', '/admin.html',
