@@ -1,0 +1,36 @@
+# ASRYO Render migration preview. This creates a PAID Starter web service
+# with a persistent disk. Review billing before deploying this Blueprint.
+# This file intentionally does not attach asryo.com or open checkout.
+services:
+  - type: web
+    name: asryo-storefront-preview
+    runtime: node
+    plan: starter
+    region: singapore
+    branch: migration/render-hosting
+    autoDeployTrigger: off
+    buildCommand: npm run check
+    startCommand: npm start
+    healthCheckPath: /healthz
+    numInstances: 1
+    disk:
+      name: asryo-sqlite-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: DATA_DIR
+        value: /var/data
+      - key: STORE_READY
+        value: "false"
+      - key: HIDE_PUBLIC_PRODUCTS
+        value: "true"
+      - key: APP_ORIGIN
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
