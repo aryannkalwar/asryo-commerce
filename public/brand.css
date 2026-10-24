@@ -1,18 +1,28 @@
-/* Uploaded ASRYO metallic brand assets — preserving existing page layouts */
+/* ASRYO identity: original black-metal A monogram, high-contrast premium presentation. */
 .asryo-brand-lockup,
 a.brand.asryo-brand-lockup,
 a.logo.asryo-brand-lockup,
 .asryo-racing .site-header .brand.asryo-brand-lockup{
   display:inline-flex!important;align-items:center;justify-content:flex-start;
-  gap:8px;flex-shrink:0;white-space:nowrap;text-decoration:none;line-height:1;
-  letter-spacing:normal!important;min-width:0;max-width:100%
+  gap:9px;flex-shrink:0;white-space:nowrap;text-decoration:none;line-height:1;
+  letter-spacing:normal!important;min-width:0;max-width:100%;
 }
-.asryo-brand-lockup .asryo-logo-icon{display:block;width:43px;height:43px;object-fit:contain;flex:none}
+.asryo-brand-lockup .asryo-logo-icon,
+.asryo-logo-footer .asryo-logo-icon{
+  display:block;width:46px;height:46px;box-sizing:border-box;object-fit:contain;flex:none;
+  border-radius:8px;padding:3px;border:1px solid #dedcda;
+  background:linear-gradient(145deg,#f4f3f2,#dad9d7);
+}
 .asryo-brand-lockup .asryo-logo-wordmark{display:block;width:154px;height:auto;max-height:43px;object-fit:contain;flex:none}
-a.asryo-brand-full-link,.asryo-racing .footer .brand.asryo-brand-full-link{display:inline-block;text-decoration:none;max-width:100%;line-height:1}
-.asryo-logo-full{display:block;width:min(240px,100%);max-width:100%;height:auto;object-fit:contain}
+a.asryo-brand-full-link,.asryo-racing .footer .brand.asryo-brand-full-link{
+  display:inline-flex!important;max-width:100%;line-height:1;text-decoration:none;
+}
+.asryo-logo-footer{display:flex;align-items:center;gap:12px;max-width:100%;white-space:nowrap}
+.asryo-logo-footer .asryo-logo-icon{width:74px;height:74px;border-radius:11px;padding:6px}
+.asryo-logo-footer .asryo-logo-wordmark{display:block;width:185px;height:auto;max-width:calc(100% - 86px);object-fit:contain}
 @media(max-width:650px){
-  .asryo-brand-lockup .asryo-logo-icon{width:32px;height:32px}
-  .asryo-brand-lockup .asryo-logo-wordmark{width:130px;max-height:35px}
-  .asryo-logo-full{width:208px}
+  .asryo-brand-lockup .asryo-logo-icon{width:38px;height:38px;border-radius:7px}
+  .asryo-brand-lockup .asryo-logo-wordmark{width:125px;max-height:34px}
+  .asryo-logo-footer .asryo-logo-icon{width:58px;height:58px;padding:4px}
+  .asryo-logo-footer .asryo-logo-wordmark{width:150px}
 }
