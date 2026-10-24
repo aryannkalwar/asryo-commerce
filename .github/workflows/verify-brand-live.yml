@@ -1,0 +1,77 @@
+name: Verify live ASRYO metallic branding
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-brand-live.yml'
+      - 'public/index.html'
+      - 'public/brand.css'
+      - 'public/assets/asryo-metallic-*'
+      - 'public/manifest.webmanifest'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  brand-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+      - name: Verify logo assets and responsive pages
+        shell: bash
+        run: |
+          mkdir -p screenshots
+          cat > /tmp/brand_qa.py <<'PY'
+          from playwright.sync_api import sync_playwright
+          origin='https://asryo.com'
+          assets=['/brand.css','/assets/asryo-metallic-logo.webp','/assets/asryo-metallic-wordmark.webp','/assets/asryo-metallic-icon.png','/manifest.webmanifest']
+          with sync_playwright() as p:
+              req=p.request.new_context(timeout=30000)
+              for path in assets:
+                  r=req.get(origin+path)
+                  assert r.status==200, f'{path}: HTTP {r.status}'
+                  assert len(r.body())>200, f'{path}: file too small'
+                  print(f'BRAND FILE PASS: {path} ({len(r.body())} bytes)')
+              browser=p.chromium.launch(headless=True)
+              for name,w,h in [('desktop',1440,900),('mobile',390,844)]:
+                  page=browser.new_page(viewport={'width':w,'height':h})
+                  response=page.goto(origin+'/',wait_until='networkidle',timeout=60000)
+                  assert response and response.status==200
+                  logos=page.locator('.site-header .asryo-brand-lockup img')
+                  assert logos.count()==2, f'{name}: missing two-part ASRYO navigation lockup'
+                  for i in range(logos.count()):
+                      assert logos.nth(i).evaluate('(img) => img.complete && img.naturalWidth > 0'), f'{name}: broken logo element {i}'
+                  full=page.locator('.footer .asryo-logo-full')
+                  assert full.count()==1 and full.first.evaluate('(img) => img.complete && img.naturalWidth > 0'), f'{name}: footer full logo missing'
+                  size=page.evaluate('document.documentElement.scrollWidth - window.innerWidth')
+                  print(f'{name}: horizontal overflow {size}px; header logo loaded, footer logo loaded')
+                  assert size<=5,f'{name}: horizontal overflow {size}px'
+                  page.screenshot(path=f'screenshots/asryo-brand-home-{name}.png',full_page=False)
+                  page.close()
+              for path in ['/shadowbound.html','/red-sun-002.html','/speed-division.html','/dream-future.html','/celestial-001.html']:
+                  page=browser.new_page(viewport={'width':390,'height':844})
+                  response=page.goto(origin+path,wait_until='domcontentloaded',timeout=40000)
+                  assert response and response.status==200, f'{path}: load failed'
+                  logo=page.locator('.asryo-brand-lockup img')
+                  assert logo.count()==2, f'{path}: header brand not updated'
+                  for i in range(2):
+                      assert logo.nth(i).evaluate('(img) => img.complete && img.naturalWidth > 0') or logo.nth(i).evaluate('(img) => img.decode().then(()=>true).catch(()=>false)'), f'{path}: icon missing'
+                  page.close()
+              browser.close()
+              req.dispose()
+          print('ASRYO METALLIC LOGO LIVE QA PASSED')
+          PY
+          python /tmp/brand_qa.py
+      - name: Upload visual previews
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: asryo-metallic-branding-screenshots
+          path: screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
