@@ -1,0 +1,94 @@
+name: Check live ASRYO Shadowbound gallery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-shadowbound-live.yml'
+      - 'public/shadowbound.html'
+      - 'public/shadowbound-gallery.js'
+      - 'public/assets/shadowbound-*.webp'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-gallery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser test tools
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+      - name: Check live page, image files, desktop and mobile gallery
+        shell: bash
+        run: |
+          mkdir -p screenshots
+          cat > /tmp/asryo_verify_live.py <<'PY'
+          import json
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+
+          origin = "https://asryo.com"
+          paths = [
+              "/assets/shadowbound-front.webp",
+              "/assets/shadowbound-back.webp",
+              "/assets/shadowbound-chest-detail.webp",
+              "/assets/shadowbound-label-detail.webp",
+              "/assets/shadowbound-artwork-detail.webp",
+              "/assets/shadowbound-sleeve-detail.webp",
+          ]
+          with sync_playwright() as playwright:
+              request = playwright.request.new_context(timeout=30000)
+              for item in ["/shadowbound.html", "/shadowbound-gallery.js", *paths]:
+                  response = request.get(origin + item)
+                  content_type = response.headers.get("content-type", "")
+                  assert response.status == 200, f"{item}: HTTP {response.status}"
+                  if item.endswith(".webp"):
+                      assert "image" in content_type, f"{item}: unexpected {content_type}"
+                      assert len(response.body()) > 2000, f"{item}: blank file"
+                  print(f"PASS HTTP {response.status} {item} {len(response.body())} bytes")
+              browser = playwright.chromium.launch(headless=True)
+              for name, w, h in [("desktop", 1440, 960), ("mobile", 390, 844)]:
+                  page = browser.new_page(viewport={"width": w, "height": h}, device_scale_factor=1)
+                  errors = []
+                  page.on("pageerror", lambda err: errors.append(str(err)))
+                  resp = page.goto(origin + "/shadowbound.html", wait_until="networkidle", timeout=60000)
+                  assert resp and resp.status == 200, f"{name}: failed page navigation"
+                  assert page.title().startswith("ASRYO SHADOWBOUND"), f"{name}: wrong page title"
+                  assert page.locator(".gallery-shot").count() == 6, f"{name}: expected 6 views"
+                  for i in range(6):
+                      img = page.locator(".gallery-shot img").nth(i)
+                      assert img.evaluate("(img) => img.complete && img.naturalWidth > 20"), f"{name}: missing image {i+1}"
+                  assert page.locator("text=COMING SOON").count() > 0, f"{name}: availability disclaimer missing"
+                  overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
+                  assert overflow <= 4, f"{name}: {overflow}px horizontal overflow"
+                  page.screenshot(path=f"screenshots/shadowbound-{name}.png", full_page=True)
+                  page.locator(".gallery-shot").nth(0).click()
+                  assert page.locator("#imageViewer").evaluate("(el) => el.open"), f"{name}: modal didn't open"
+                  viewer_img = page.locator("#viewerImage")
+                  assert viewer_img.evaluate("(img) => img.complete && img.naturalWidth > 0"), f"{name}: modal image missing"
+                  page.keyboard.press("Escape")
+                  assert not page.locator("#imageViewer").evaluate("(el) => el.open"), f"{name}: modal didn't close"
+                  assert not errors, f"{name}: JS errors: {errors}"
+                  print(json.dumps({"view": name, "gallery_images": 6, "zoom": "passed", "mobile_overflow_px": overflow, "javascript_errors": errors}))
+                  page.close()
+              browser.close()
+              request.dispose()
+          print("LIVE ASRYO SHADOWBOUND QA: PASSED")
+          PY
+          python /tmp/asryo_verify_live.py
+      - name: Save screenshots for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asryo-shadowbound-live-screenshots
+          path: screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
