@@ -1,4 +1,4 @@
-name: Verify live ASRYO metallic branding
+name: Verify live ASRYO black-metal branding
 on:
   push:
     branches: [main]
@@ -6,7 +6,7 @@ on:
       - '.github/workflows/verify-brand-live.yml'
       - 'public/index.html'
       - 'public/brand.css'
-      - 'public/assets/asryo-metallic-*'
+      - 'public/assets/asryo-black-*'
       - 'public/manifest.webmanifest'
   workflow_dispatch:
 permissions:
@@ -29,7 +29,7 @@ jobs:
           cat > /tmp/brand_qa.py <<'PY'
           from playwright.sync_api import sync_playwright
           origin='https://asryo.com'
-          assets=['/brand.css','/assets/asryo-metallic-logo.webp','/assets/asryo-metallic-wordmark.webp','/assets/asryo-metallic-icon.png','/manifest.webmanifest']
+          assets=['/brand.css','/assets/asryo-black-monogram.webp','/assets/asryo-black-favicon.png','/assets/asryo-metallic-wordmark.webp','/manifest.webmanifest']
           with sync_playwright() as p:
               req=p.request.new_context(timeout=30000)
               for path in assets:
@@ -46,32 +46,36 @@ jobs:
                   assert logos.count()==2, f'{name}: missing two-part ASRYO navigation lockup'
                   for i in range(logos.count()):
                       assert logos.nth(i).evaluate('(img) => img.complete && img.naturalWidth > 0'), f'{name}: broken logo element {i}'
-                  full=page.locator('.footer .asryo-logo-full')
-                  assert full.count()==1 and full.first.evaluate('(img) => img.complete && img.naturalWidth > 0'), f'{name}: footer full logo missing'
+                  assert logos.first.get_attribute('src')=='/assets/asryo-black-monogram.webp', f'{name}: header still uses previous logo'
+                  assert page.locator('link[rel="icon"]').first.get_attribute('href')=='/assets/asryo-black-favicon.png', f'{name}: wrong favicon'
+                  footer=page.locator('.footer .asryo-logo-footer img')
+                  assert footer.count()==2, f'{name}: two-part footer emblem missing'
+                  for i in range(footer.count()):
+                      assert footer.nth(i).evaluate('(img) => img.complete && img.naturalWidth > 0'), f'{name}: footer logo {i} broken'
                   size=page.evaluate('document.documentElement.scrollWidth - window.innerWidth')
-                  print(f'{name}: horizontal overflow {size}px; header logo loaded, footer logo loaded')
+                  print(f'{name}: horizontal overflow {size}px; new black-metal logo and footer loaded')
                   assert size<=5,f'{name}: horizontal overflow {size}px'
-                  page.screenshot(path=f'screenshots/asryo-brand-home-{name}.png',full_page=False)
+                  page.screenshot(path=f'screenshots/asryo-black-brand-home-{name}.png',full_page=False)
                   page.close()
               for path in ['/shadowbound.html','/red-sun-002.html','/speed-division.html','/dream-future.html','/celestial-001.html']:
                   page=browser.new_page(viewport={'width':390,'height':844})
                   response=page.goto(origin+path,wait_until='domcontentloaded',timeout=40000)
                   assert response and response.status==200, f'{path}: load failed'
                   logo=page.locator('.asryo-brand-lockup img')
-                  assert logo.count()==2, f'{path}: header brand not updated'
+                  assert logo.count()==2, f'{path}: header brand not updated'\n                  assert logo.first.get_attribute('src')=='/assets/asryo-black-monogram.webp', f'{path}: previous logo still displayed'
                   for i in range(2):
                       assert logo.nth(i).evaluate('(img) => img.complete && img.naturalWidth > 0') or logo.nth(i).evaluate('(img) => img.decode().then(()=>true).catch(()=>false)'), f'{path}: icon missing'
                   page.close()
               browser.close()
               req.dispose()
-          print('ASRYO METALLIC LOGO LIVE QA PASSED')
+          print('ASRYO BLACK-METAL LOGO LIVE QA PASSED')
           PY
           python /tmp/brand_qa.py
       - name: Upload visual previews
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: asryo-metallic-branding-screenshots
+          name: asryo-black-metal-branding-screenshots
           path: screenshots/
           retention-days: 7
           if-no-files-found: ignore
