@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'asryo-';
-const SHELL_CACHE = `${CACHE_PREFIX}offline-v5`;
+const SHELL_CACHE = `${CACHE_PREFIX}offline-v6`;
 const DATA_CACHE = `${CACHE_PREFIX}public-data-v3`;
-const ASSET_CACHE = `${CACHE_PREFIX}assets-v5`;
+const ASSET_CACHE = `${CACHE_PREFIX}assets-v6`;
 const SHELL = [
   '/', '/offline.html', '/style.css', '/luxury.css?v=dream-future-20261018',
   '/speed.css?v=image-fit-20261019', '/product.css?v=image-fit-20261019',
   '/product-page.js?v=launch-readiness-1', '/app.js?v=products-hidden-2',
-  '/manifest.webmanifest','/asryo-mark.svg', '/track.html','/track.js',
+  '/manifest.webmanifest','/asryo-mark.svg', '/brand.css?v=metallic-20261024', '/assets/asryo-metallic-icon.png', '/assets/asryo-metallic-wordmark.webp', '/assets/asryo-metallic-logo.webp', '/track.html','/track.js',
   '/policies.html','/policies.js', '/admin.html',
   '/speed-division.html','/dream-future.html','/unsubscribe.html','/early-access-confirmed.html',
   '/assets/asryo-drop-001-lookbook.webp',
