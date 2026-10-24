@@ -62,7 +62,8 @@ jobs:
                   response=page.goto(origin+path,wait_until='domcontentloaded',timeout=40000)
                   assert response and response.status==200, f'{path}: load failed'
                   logo=page.locator('.asryo-brand-lockup img')
-                  assert logo.count()==2, f'{path}: header brand not updated'\n                  assert logo.first.get_attribute('src')=='/assets/asryo-black-monogram.webp', f'{path}: previous logo still displayed'
+                  assert logo.count()==2, f'{path}: header brand not updated'
+                  assert logo.first.get_attribute('src')=='/assets/asryo-black-monogram.webp', f'{path}: previous logo still displayed'
                   for i in range(2):
                       assert logo.nth(i).evaluate('(img) => img.complete && img.naturalWidth > 0') or logo.nth(i).evaluate('(img) => img.decode().then(()=>true).catch(()=>false)'), f'{path}: icon missing'
                   page.close()
