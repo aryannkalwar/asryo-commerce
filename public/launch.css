@@ -1,0 +1,31 @@
+/* ASRYO launch refinement — real design previews, accessible mobile navigation. */
+.asryo-racing .site-header nav{gap:clamp(10px,1.3vw,21px);align-items:center}
+.asryo-racing .site-header nav a{font-size:clamp(9px,.75vw,12px);white-space:nowrap}
+.asryo-racing .asryo-edit{background:#0e0f12;padding-top:90px;padding-bottom:90px;border-top:1px solid #ffffff25}
+.asryo-edit-heading{display:grid;grid-template-columns:1.3fr .7fr;gap:clamp(20px,5vw,65px);align-items:end;margin-bottom:32px}
+.asryo-edit-heading h2{font:900 clamp(36px,5.7vw,80px)/.95 Impact,"Arial Black",Arial,sans-serif;letter-spacing:-.01em;margin:12px 0 0}
+.asryo-edit-heading>p{font-size:14px;line-height:1.7;color:#c5c3c7;max-width:465px;margin:0 0 5px}
+.asryo-edit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.asryo-edit-card{text-decoration:none;color:#f4f3f5;display:flex;flex-direction:column;min-width:0;background:#1b1c22;border:1px solid #ffffff2b;transition:border-color .2s,transform .2s}
+.asryo-edit-card:hover{border-color:#ed4c64;transform:translateY(-3px)}
+.asryo-edit-card:focus-visible{outline:3px solid #f59baf;outline-offset:4px}
+.asryo-edit-photo{background:radial-gradient(circle at 45% 30%,#35363e,#111216 68%);aspect-ratio:4/4.5;display:grid;place-items:center;overflow:hidden}
+.asryo-edit-photo img{display:block;width:100%;height:100%;object-fit:contain;object-position:center;transition:transform .25s}
+.asryo-edit-card:hover .asryo-edit-photo img{transform:scale(1.025)}
+.asryo-edit-info{padding:20px 21px 24px;display:flex;flex-direction:column;flex:1}
+.asryo-edit-info span,.asryo-fit-note span{font-size:10px;letter-spacing:.18em;color:#f88b9c}
+.asryo-edit-info h3{font:800 clamp(20px,2.1vw,31px) Impact,"Arial Black",sans-serif;letter-spacing:.03em;margin:14px 0 9px}
+.asryo-edit-info p{font-size:12px;color:#c7c6cd;line-height:1.65;flex:1;margin:0 0 17px}
+.asryo-edit-info b{font-size:11px;letter-spacing:.16em;color:#fff}
+.asryo-fit-note{margin-top:20px;border:1px solid #ffffff31;background:#191a1f;padding:24px 26px;display:grid;grid-template-columns:.85fr 1.15fr;gap:30px;align-items:center}
+.asryo-fit-note h3{font:500 clamp(21px,2.3vw,33px) Georgia,serif;margin:8px 0}
+.asryo-fit-note p{font-size:12px;line-height:1.75;color:#c7c6cc;margin:0}
+.asryo-fit-note a{color:#ffc5cd}
+.asryo-racing .asryo-preference-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.asryo-racing .asryo-preference-row label{font-size:11px;letter-spacing:.045em;color:#ebe6e6;line-height:1.4}
+.asryo-racing .asryo-preference-row select{display:block;min-width:0;width:100%;margin-top:8px;padding:13px 11px;background:#0e1015;color:#f6f3f2;border:1px solid #999199;border-radius:5px;min-height:47px}
+.asryo-racing .speed-message a{color:#ffb8c3;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:950px){.asryo-edit-heading{grid-template-columns:1fr}.asryo-edit-grid{gap:12px}.asryo-edit-info{padding:16px}}
+@media(max-width:760px){.asryo-racing .site-header{min-width:0}.asryo-racing .site-header nav{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;flex-wrap:nowrap;white-space:nowrap;justify-content:flex-start;gap:20px;padding-bottom:9px;-webkit-overflow-scrolling:touch}.asryo-racing .site-header nav a{font-size:10px;flex-shrink:0}.asryo-racing .asryo-edit{padding-block:58px}.asryo-edit-grid{grid-template-columns:1fr;gap:15px}.asryo-edit-card{display:grid;grid-template-columns:42% minmax(0,1fr)}.asryo-edit-photo{aspect-ratio:4/5}.asryo-edit-info{padding:15px}.asryo-edit-info h3{font-size:24px}.asryo-fit-note{grid-template-columns:1fr;padding:20px;gap:12px}}
+@media(max-width:430px){.asryo-racing .asryo-preference-row{grid-template-columns:1fr}.asryo-edit-card{grid-template-columns:43% 57%}.asryo-edit-info span{font-size:9px}.asryo-edit-info h3{font-size:21px}.asryo-edit-info p{font-size:11px}.asryo-edit-info b{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.asryo-edit-card,.asryo-edit-photo img{transition:none!important}}

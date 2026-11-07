@@ -64,6 +64,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS orders_customer_created ON orders(customer_id, created_at DESC);
 `);
 
+// Existing Railway volumes predate design-preference tracking. Extend in place.
+for (const [column, definition] of [['design_preference','TEXT'],['size_preference','TEXT']]) {
+  if (!db.prepare('PRAGMA table_info(early_access)').all().some(row => row.name === column)) {
+    db.exec(`ALTER TABLE early_access ADD COLUMN ${column} ${definition}`);
+  }
+}
+
 // Keep databases created by the earlier payment preview compatible without
 // mislabelling historical orders as cash-on-delivery orders.
 if (!db.prepare('PRAGMA table_info(orders)').all().some(column => column.name === 'payment_method')) {
@@ -312,12 +319,13 @@ async function handle(req, res) {
       const ready = !HIDE_PUBLIC_PRODUCTS && String(process.env.STORE_READY).toLowerCase() === 'true' && available > 0;
       return json(res, 200, { storeReady: ready, availableProducts: HIDE_PUBLIC_PRODUCTS ? 0 : available, paymentMethod: 'cash_on_delivery', assistant: Boolean(process.env.OPENAI_API_KEY), accountVerification: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM), supportEmail: process.env.PUBLIC_SUPPORT_EMAIL || null, supportPhone: process.env.PUBLIC_SUPPORT_PHONE || null, businessName: process.env.PUBLIC_BUSINESS_NAME || 'ASRYO' });
     }
-    if (req.method === 'GET' && path === '/api/early-access/status')
-      return json(res, 200, { enabled: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM && process.env.APP_ORIGIN), doubleOptIn:true });
+    if (req.method === 'GET' && path === '/api/early-access/status') {
+      const emailReady=Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM && process.env.APP_ORIGIN);
+      return json(res, 200, { enabled:emailReady, acceptingInterest:true, emailVerificationAvailable:emailReady, doubleOptIn:true });
+    }
 
     if (req.method === 'POST' && path === '/api/early-access') {
       const cfgReady=Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM && process.env.APP_ORIGIN);
-      if (!cfgReady) return json(res, 503, { error:'Early-access email confirmation is not available yet. Please check back soon.' });
       const input = await jsonBody(req, 2048);
       if (!input || typeof input !== 'object' || Array.isArray(input)) return json(res,400,{error:'Invalid signup request.'});
       // Honeypot: accept silently but do not store automated submissions.
@@ -325,8 +333,29 @@ async function handle(req, res) {
       const email=String(input.email || '').trim().toLowerCase();
       if (email.length > 254 || !/^[^\s@]{1,64}@[^\s@]+\.[^\s@]+$/.test(email) || input.consent !== true)
         return json(res,400,{error:'Enter a valid email and agree to receive ASRYO launch updates.'});
+      const designChoices=new Set(['speed-division','dream-future','shadowbound','raven','other','not-sure']);
+      const sizeChoices=new Set(['S','M','L','XL','XXL','not-sure']);
+      const design=String(input.design||'not-sure');
+      const size=String(input.size||'not-sure');
+      if (!designChoices.has(design) || !sizeChoices.has(size)) return json(res,400,{error:'Please select a valid design and size preference.'});
       const existing=db.prepare('SELECT verified_at,unsubscribed_at,last_sent_at FROM early_access WHERE email=?').get(email);
-      if (existing?.verified_at && !existing.unsubscribed_at) return json(res,202,{message:'If eligible, your confirmation email is on its way.'});
+      if (existing?.verified_at && !existing.unsubscribed_at) return json(res,202,{message:'This address is already confirmed for ASRYO launch news.'});
+      if (!cfgReady) {
+        // Record a real, consented interest request, but never call it a verified subscriber.
+        // Give the visitor a cancellation link because no delivery service exists yet.
+        const cancelToken=randomBytes(32).toString('hex'),at=now();
+        db.prepare(`INSERT INTO early_access(email,consent_at,verified_at,verify_token_hash,verify_expires_at,last_sent_at,unsubscribe_token_hash,unsubscribed_at,design_preference,size_preference)
+          VALUES(?,?,NULL,NULL,NULL,NULL,?,NULL,?,?) ON CONFLICT(email) DO UPDATE SET
+          consent_at=excluded.consent_at,verified_at=NULL,verify_token_hash=NULL,verify_expires_at=NULL,
+          last_sent_at=NULL,unsubscribe_token_hash=excluded.unsubscribe_token_hash,unsubscribed_at=NULL,
+          design_preference=excluded.design_preference,size_preference=excluded.size_preference`)
+          .run(email,at,hash(cancelToken),design,size);
+        return json(res,202,{
+          pendingVerification:true,
+          message:'Your ASRYO launch interest is saved, including your preferred design and size. No email updates are active yet. You are not subscribed until you verify your address when confirmations become available. Save the cancellation link below.',
+          cancelUrl:'/unsubscribe.html?token='+encodeURIComponent(cancelToken)
+        });
+      }
       if (existing?.last_sent_at && Date.now()-existing.last_sent_at < 60*60*1000)
         return json(res,202,{message:'If eligible, your confirmation email is on its way.'});
       const token=randomBytes(32).toString('hex');
@@ -339,12 +368,13 @@ async function handle(req, res) {
       }).catch(()=>null);
       if(!result?.ok) return json(res,503,{error:'Confirmation email could not be sent. Please try later.'});
       const at=now();
-      db.prepare(`INSERT INTO early_access(email,consent_at,verified_at,verify_token_hash,verify_expires_at,last_sent_at,unsubscribe_token_hash,unsubscribed_at)
-        VALUES(?,?,?,?,?,?,?,NULL) ON CONFLICT(email) DO UPDATE SET
+      db.prepare(`INSERT INTO early_access(email,consent_at,verified_at,verify_token_hash,verify_expires_at,last_sent_at,unsubscribe_token_hash,unsubscribed_at,design_preference,size_preference)
+        VALUES(?,?,?,?,?,?,?,NULL,?,?) ON CONFLICT(email) DO UPDATE SET
         consent_at=excluded.consent_at, verified_at=NULL, verify_token_hash=excluded.verify_token_hash,
         verify_expires_at=excluded.verify_expires_at,last_sent_at=excluded.last_sent_at,
-        unsubscribe_token_hash=excluded.unsubscribe_token_hash,unsubscribed_at=NULL`)
-        .run(email,at,null,hash(token),Date.now()+24*60*60*1000,Date.now(),hash(unsubscribeToken));
+        unsubscribe_token_hash=excluded.unsubscribe_token_hash,unsubscribed_at=NULL,
+        design_preference=excluded.design_preference,size_preference=excluded.size_preference`)
+        .run(email,at,null,hash(token),Date.now()+24*60*60*1000,Date.now(),hash(unsubscribeToken),design,size);
       return json(res,202,{message:'Check your inbox and confirm your email to join the early-access list.'});
     }
     if (req.method === 'GET' && path === '/api/early-access/verify') {
@@ -449,7 +479,10 @@ async function handle(req, res) {
     if (req.method === 'GET' && path === '/api/admin/early-access') {
       const count=db.prepare('SELECT COUNT(*) n FROM early_access WHERE verified_at IS NOT NULL AND unsubscribed_at IS NULL').get().n;
       const subscribers=db.prepare('SELECT email,verified_at AS verifiedAt FROM early_access WHERE verified_at IS NOT NULL AND unsubscribed_at IS NULL ORDER BY verified_at DESC LIMIT 1000').all();
-      return json(res,200,{count,subscribers});
+      const pending=db.prepare('SELECT COUNT(*) n FROM early_access WHERE verified_at IS NULL AND unsubscribed_at IS NULL').get().n;
+      const preferences=db.prepare('SELECT design_preference AS design,COUNT(*) AS count FROM early_access WHERE unsubscribed_at IS NULL AND design_preference IS NOT NULL GROUP BY design_preference ORDER BY count DESC').all();
+      const sizes=db.prepare('SELECT size_preference AS size,COUNT(*) AS count FROM early_access WHERE unsubscribed_at IS NULL AND size_preference IS NOT NULL GROUP BY size_preference ORDER BY count DESC').all();
+      return json(res,200,{count,subscribers,pending,preferences,sizes});
     }
     if (req.method === 'GET' && path === '/api/admin/products') return json(res,200,{products:allProducts()});
     if (req.method === 'PATCH' && path.startsWith('/api/admin/products/')) {
