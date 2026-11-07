@@ -11,8 +11,12 @@ async function renderEarlyAccess(){
   const box=$('#adminEarly'),count=$('#earlyCount');box.textContent='Loading verified signups…';
   try{
     const data=await api('/api/admin/early-access');
-    count.textContent=data.count+' verified, subscribed addresses';
-    box.innerHTML=data.subscribers.length?data.subscribers.map(x=>'<article class="admin-empty"><strong>'+esc(x.email)+'</strong><br>Confirmed '+esc(new Date(x.verifiedAt).toLocaleString('en-IN'))+'</article>').join(''):'<div class="admin-empty">No verified subscribers yet. Signup requires configured confirmation email.</div>';
+    count.textContent=String(data.pending||0)+' genuine research requests pending verification · '+data.count+' email-verified subscribers';
+    const summary=(title,rows,key)=>'<article class="admin-empty"><strong>'+title+'</strong><br>'+(rows?.length?rows.map(row=>'<span style="display:block;padding-top:7px">'+esc(String(row[key]||'not-sure').replaceAll('-',' '))+' · '+Number(row.count||0)+'</span>').join(''):'No preferences recorded yet.')+'</article>';
+    const verified=data.subscribers.length?data.subscribers.map(x=>'<article class="admin-empty"><strong>'+esc(x.email)+'</strong><br>Confirmed '+esc(new Date(x.verifiedAt).toLocaleString('en-IN'))+'</article>').join(''):'<article class="admin-empty">No email-verified subscribers yet. Do not send marketing to pending interest requests.</article>';
+    box.innerHTML=summary('Preferred designs (real visitor submissions)',data.preferences,'design')
+      +summary('Preferred sizes (non-binding)',data.sizes,'size')
+      +verified;
   }catch(error){count.textContent='';box.textContent=error.message}
 }
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',async()=>{
