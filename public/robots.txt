@@ -1,6 +1,12 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /workspace
+Disallow: /fashion-os
+Disallow: /dashboard
+Disallow: /studio
+Disallow: /manufacturing
+Disallow: /operations
 Disallow: /api/
 Disallow: /early-access-confirmed.html
 Disallow: /unsubscribe.html
