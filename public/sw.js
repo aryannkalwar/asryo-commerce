@@ -1,126 +1,119 @@
-const CACHE_PREFIX = 'asryo-';
-const SHELL_CACHE = `${CACHE_PREFIX}offline-v7`;
-const DATA_CACHE = `${CACHE_PREFIX}public-data-v3`;
-const ASSET_CACHE = `${CACHE_PREFIX}assets-v7`;
-const SHELL = [
-  '/', '/offline.html', '/style.css', '/luxury.css?v=dream-future-20261018',
-  '/speed.css?v=image-fit-20261019', '/product.css?v=image-fit-20261019',
-  '/product-page.js?v=launch-readiness-1', '/app.js?v=products-hidden-2',
-  '/manifest.webmanifest','/asryo-mark.svg', '/brand.css?v=black-emblem-20261024', '/assets/asryo-black-monogram.webp', '/assets/asryo-black-favicon.png', '/assets/asryo-metallic-wordmark.webp', '/track.html','/track.js',
-  '/policies.html','/policies.js', '/admin.html',
-  '/speed-division.html','/dream-future.html','/unsubscribe.html','/early-access-confirmed.html',
-  '/assets/asryo-drop-001-lookbook.webp',
-  '/assets/asryo-speed-division-front.webp','/assets/asryo-speed-division-back.webp',
-  '/assets/asryo-dream-front.webp','/assets/asryo-dream-back.webp'
+// ASRYO offline support is strictly for PUBLIC product previews.
+// Never store owner, manufacturing, orders, account details or private APIs in browser caches.
+const CACHE_PREFIX='asryo-';
+const SHELL_CACHE='asryo-public-shell-v8';
+const DATA_CACHE='asryo-public-data-v4';
+const ASSET_CACHE='asryo-public-assets-v8';
+const PUBLIC_PAGES=new Set([
+ '/','/index.html','/offline.html','/about.html','/policies.html',
+ '/speed-division.html','/dream-future.html','/shadowbound.html',
+ '/raven-collection.html','/design-archive.html','/beyond-ordinary.html',
+ '/concept-visuals.html','/red-sun-002.html','/celestial-001.html'
+]);
+const PRIVATE_PATHS=new Set([
+ '/admin','/admin.html','/workspace','/workspace.html',
+ '/fashion-os','/dashboard','/dashboard.html',
+ '/studio','/operations','/operations.html',
+ '/manufacturing','/team','/team.html',
+ '/track.html','/unsubscribe.html','/early-access-confirmed.html'
+]);
+const PUBLIC_DATA=new Set(['/api/status','/api/products']);
+const SHELL=[
+ '/','/offline.html','/style.css','/launch.css?v=launch-ready-20261107',
+ '/luxury.css?v=dream-future-20261018','/speed.css?v=image-fit-20261019',
+ '/product.css?v=image-fit-20261019','/product-page.js?v=launch-readiness-2',
+ '/app.js?v=products-hidden-2','/manifest.webmanifest',
+ '/asryo-mark.svg','/brand.css?v=black-emblem-20261024',
+ '/assets/asryo-black-monogram.webp','/assets/asryo-black-favicon.png',
+ '/assets/asryo-metallic-wordmark.webp',
+ '/speed-division.html','/dream-future.html','/shadowbound.html',
+ '/assets/asryo-speed-division-front.webp','/assets/asryo-dream-front.webp',
+ '/assets/shadowbound-front.webp'
 ];
 
-async function cacheOne(cache, request) {
-  try {
-    const response = await fetch(request, { cache: 'reload' });
-    if (response.ok && response.type === 'basic') await cache.put(request, response.clone());
-    return response;
-  } catch {
-    return null;
-  }
+const isPublicResponse=response=>response?.ok && response.type==='basic'
+  && !/(private|no-store)/i.test(response.headers.get('cache-control')||'');
+
+async function cacheOne(cache,path){
+ try{
+  const response=await fetch(path,{cache:'reload',credentials:'omit'});
+  if(isPublicResponse(response))await cache.put(path,response.clone());
+  return response;
+ }catch{return null}
 }
-
-async function seedCatalog() {
-  const dataCache = await caches.open(DATA_CACHE);
-  const assetsCache = await caches.open(ASSET_CACHE);
-  const response = await cacheOne(dataCache, '/api/products');
-  await cacheOne(dataCache, '/api/status');
-  // Do not precache catalog images while all public listings are hidden.
-  if (!response?.ok) return;
-
-  try {
-    const { products = [] } = await response.clone().json();
-    const images = [...new Set(products.map(product => product.image).filter(path => {
-      if (typeof path !== 'string') return false;
-      const url = new URL(path, self.location.origin);
-      return url.origin === self.location.origin && url.pathname.startsWith('/assets/');
-    }))];
-    for (let index = 0; index < images.length; index += 4) {
-      await Promise.allSettled(images.slice(index, index + 4).map(path => cacheOne(assetsCache, path)));
-    }
-  } catch {
-    // Keep the shell usable if a catalog response is malformed.
-  }
+async function prime(){
+ const shell=await caches.open(SHELL_CACHE);
+ await Promise.allSettled(SHELL.map(path=>cacheOne(shell,path)));
+ const data=await caches.open(DATA_CACHE);
+ for(const path of PUBLIC_DATA){
+  try{const response=await fetch(path,{cache:'reload',credentials:'omit'});if(response.ok)await data.put(path,response.clone())}catch{}
+ }
 }
-
-self.addEventListener('install', event => {
-  event.waitUntil((async () => {
-    const shell = await caches.open(SHELL_CACHE);
-    await Promise.allSettled(SHELL.map(path => cacheOne(shell, path)));
-    await seedCatalog();
-    await self.skipWaiting();
-  })());
+self.addEventListener('install',event=>{
+ event.waitUntil((async()=>{await prime();await self.skipWaiting()})());
 });
-
-self.addEventListener('activate', event => {
-  event.waitUntil((async () => {
-    const names = await caches.keys();
-    await Promise.all(names.filter(name => name.startsWith(CACHE_PREFIX) && ![SHELL_CACHE, DATA_CACHE, ASSET_CACHE].includes(name)).map(name => caches.delete(name)));
-    await self.clients.claim();
-  })());
+self.addEventListener('activate',event=>{
+ event.waitUntil((async()=>{
+  const names=await caches.keys();
+  await Promise.all(names.filter(name=>name.startsWith(CACHE_PREFIX)
+   && ![SHELL_CACHE,DATA_CACHE,ASSET_CACHE].includes(name))
+   .map(name=>caches.delete(name)));
+  await self.clients.claim();
+ })());
 });
-
-async function networkFirstPublicData(request) {
-  const cache = await caches.open(DATA_CACHE);
-  try {
-    const response = await fetch(request);
-    if (response.ok) await cache.put(request, response.clone());
-    return response;
-  } catch {
-    const cached = await cache.match(request);
-    if (!cached) throw new Error('No saved public preview data');
-    const headers = new Headers(cached.headers);
-    headers.set('X-ASRYO-Offline', '1');
-    return new Response(cached.body, { status: cached.status, statusText: cached.statusText, headers });
-  }
+async function networkFirstData(request){
+ const cache=await caches.open(DATA_CACHE);
+ try{
+  const response=await fetch(request);
+  if(response.ok)await cache.put(request,response.clone());
+  return response;
+ }catch{
+  const stored=await cache.match(request);
+  if(!stored)throw Error('Public preview data unavailable offline');
+  const headers=new Headers(stored.headers);headers.set('X-ASRYO-Offline','1');
+  return new Response(stored.body,{status:stored.status,statusText:stored.statusText,headers});
+ }
 }
-
-async function networkFirstPage(request) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(SHELL_CACHE);
-      await cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    return await caches.match(request) || await caches.match('/offline.html');
-  }
-}
-
-async function cacheFirstAsset(request) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
-  const response = await fetch(request);
-  if (response.ok && response.type === 'basic') {
-    const cache = await caches.open(ASSET_CACHE);
-    await cache.put(request, response.clone());
+async function networkFirstPage(request){
+ try{
+  const response=await fetch(request);
+  if(isPublicResponse(response)){
+   const cache=await caches.open(SHELL_CACHE);
+   await cache.put(request,response.clone());
   }
   return response;
+ }catch{return await caches.match(request)||await caches.match('/offline.html')}
 }
+async function cacheFirstAsset(request){
+ const saved=await caches.match(request);if(saved)return saved;
+ const response=await fetch(request);
+ if(isPublicResponse(response)){
+  const cache=await caches.open(ASSET_CACHE);
+  await cache.put(request,response.clone());
+ }
+ return response;
+}
+self.addEventListener('fetch',event=>{
+ const request=event.request;
+ if(request.method!=='GET')return;
+ const url=new URL(request.url);
+ if(url.origin!==self.location.origin)return;
+ const path=url.pathname;
 
-self.addEventListener('fetch', event => {
-  const request = event.request;
-  if (request.method !== 'GET') return;
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
+ // Do not intercept private apps, any non-public APIs, or personal-token URLs.
+ if(PRIVATE_PATHS.has(path) || path.startsWith('/api/')&&!PUBLIC_DATA.has(path)
+    || path.startsWith('/src-internal/') || url.searchParams.has('token'))return;
 
-  if (url.pathname === '/api/products' || url.pathname === '/api/status') {
-    event.respondWith(networkFirstPublicData(request));
-    return;
-  }
-
-  if (request.mode === 'navigate') {
-    event.respondWith(networkFirstPage(request));
-    return;
-  }
-
-  event.respondWith(cacheFirstAsset(request).catch(async () => {
-    if (request.destination === 'image') return new Response('', { status: 404, statusText: 'Image unavailable offline' });
-    return Response.error();
-  }));
+ if(PUBLIC_DATA.has(path) && !url.search){
+  event.respondWith(networkFirstData(request));return;
+ }
+ if(request.mode==='navigate'){
+  if(!PUBLIC_PAGES.has(path) || url.search)return;
+  event.respondWith(networkFirstPage(request));return;
+ }
+ if(['image','style','script','font','manifest'].includes(request.destination)){
+  if(!path.startsWith('/assets/')&&!/\.(css|js|webmanifest|svg|png|webp|avif|ico|jpg|jpeg|woff2?)$/i.test(path))return;
+  event.respondWith(cacheFirstAsset(request).catch(()=>request.destination==='image'
+    ?new Response('',{status:404,statusText:'Image unavailable offline'}):Response.error()));
+ }
 });
