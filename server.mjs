@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { proxyFashionOS } from './fashion-proxy.mjs';
 import { createReadStream, existsSync, mkdirSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -295,6 +296,7 @@ async function handle(req, res) {
   const url = new URL(req.url, originOf(req));
   const path = decodeURIComponent(url.pathname);
   try {
+    if (await proxyFashionOS(req, res, path, originOf(req))) return;
     if (req.method === 'GET' && path === '/healthz') return json(res, 200, { ok:true });
     if (path.startsWith('/api/') && req.method !== 'GET') requireSameOrigin(req);
     const limits = {
