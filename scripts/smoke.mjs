@@ -87,7 +87,7 @@ try {
   assert(products.every(p => !p.active), 'preview items remain unavailable for purchase');
   assert.equal(adminPage.status, 200, 'admin page loads');
   assert.equal(trackPage.status, 200, 'tracking page loads');
-  for (const path of ['/speed-division.html','/dream-future.html','/unsubscribe.html','/early-access-confirmed.html','/product.css','/product-page.js','/speed.css']){
+  for (const path of ['/editorial.css','/editorial.js','/speed-division.html','/dream-future.html','/unsubscribe.html','/early-access-confirmed.html','/product.css','/product-page.js','/speed.css']){
     const resource=await fetch(base+path);
     assert.equal(resource.status,200,path+' is served');
   }
@@ -102,6 +102,15 @@ try {
   assert.match(homePage,/THREE IDEAS\./,'curated sample concepts are shown');
   assert.match(homePage,/name="design"/,'launch interest includes favorite original design');
   assert.match(homePage,/name="size"/,'launch interest includes non-binding size preference');
+  assert.match(homePage,/BEYOND<br><em>ORDINARY\.<\/em>/,'hero introduces ASRYO master brand');
+  assert.match(homePage,/id="editorialMenuButton"/,'mobile navigation is available');
+  assert.match(homePage,/id="editorialNav"/,'mobile navigation is labelled');
+  assert.match(homePage,/id="headerActions" hidden/,'account and bag controls start hidden while checkout is closed');
+  assert.match(homePage,/id="heroAvailability"/);
+  assert.match(homePage,/href="\/design-archive.html"/,'full extended archive remains accessible');
+  assert.equal((homePage.match(/class="editorial-product"/g)||[]).length,3,'homepage features precisely three launch concepts');
+  assert((homePage.match(/<img /g)||[]).length<15,'editorial homepage avoids shipping the old 48-image catalog');
+  assert.doesNotMatch(homePage,/href="\/workspace"/,'internal business links are removed from public brand homepage');
   assert.doesNotMatch(homePage,/<nav aria-label="Main navigation">[^<]*<a href="\/workspace"/,'private operations are not the primary shopping navigation');
   const earlyStatus=await (await fetch(base+'/api/early-access/status')).json();
   assert.equal(earlyStatus.enabled,false,'verified email newsletter remains gated without verified sender');
