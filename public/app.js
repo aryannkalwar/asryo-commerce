@@ -47,7 +47,12 @@ async function load(){
   state.offlinePreview=state.offlinePreview||!navigator.onLine||results.some(result=>result.status==='rejected');
   state.cart=state.status.storeReady ? readCart() : {};
   const open=Boolean(state.status.storeReady && !state.offlinePreview);
-  $('#announceStatus').textContent='Drop 001 — coming soon';
+  // Hide unavailable shopping controls while the collection remains in preview.
+  const headerActions=$('#headerActions');
+  if(headerActions)headerActions.hidden=!open;
+  const aiButton=$('#assistantOpen');
+  if(aiButton)aiButton.hidden=!Boolean(state.status.assistant && !state.offlinePreview);
+  $('#announceStatus').textContent='Drop 001 — concept preview';
   $('#heroAvailability').textContent='Drop 001 is in preview. Shopping opens once sizes and stock are confirmed.';
   $('#checkoutUnavailable').hidden=open;
   $('#checkoutForm').hidden=!open;

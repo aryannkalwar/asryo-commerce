@@ -1,9 +1,9 @@
 // ASRYO offline support is strictly for PUBLIC product previews.
 // Never store owner, manufacturing, orders, account details or private APIs in browser caches.
 const CACHE_PREFIX='asryo-';
-const SHELL_CACHE='asryo-public-shell-v8';
+const SHELL_CACHE='asryo-public-shell-v9';
 const DATA_CACHE='asryo-public-data-v4';
-const ASSET_CACHE='asryo-public-assets-v8';
+const ASSET_CACHE='asryo-public-assets-v9';
 const PUBLIC_PAGES=new Set([
  '/','/index.html','/offline.html','/about.html','/policies.html',
  '/speed-division.html','/dream-future.html','/shadowbound.html',
@@ -19,10 +19,10 @@ const PRIVATE_PATHS=new Set([
 ]);
 const PUBLIC_DATA=new Set(['/api/status','/api/products']);
 const SHELL=[
- '/','/offline.html','/style.css','/launch.css?v=launch-ready-20261107',
+ '/','/offline.html','/style.css','/editorial.css?v=asryo20-20261107','/editorial.js?v=asryo20-20261107',
  '/luxury.css?v=dream-future-20261018','/speed.css?v=image-fit-20261019',
  '/product.css?v=image-fit-20261019','/product-page.js?v=launch-readiness-2',
- '/app.js?v=products-hidden-2','/manifest.webmanifest',
+ '/app.js?v=editorial-20261107','/manifest.webmanifest',
  '/asryo-mark.svg','/brand.css?v=black-emblem-20261024',
  '/assets/asryo-black-monogram.webp','/assets/asryo-black-favicon.png',
  '/assets/asryo-metallic-wordmark.webp',
