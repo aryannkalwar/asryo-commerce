@@ -21,13 +21,15 @@ async function initWaitlist(){
     try{
       const r=await fetch('/api/early-access/status',{cache:'no-store'});
       const data=await r.json();
-      if(!r.ok||!data.enabled){
+      if(!r.ok||!(data.acceptingInterest||data.enabled)){
         submit.disabled=true;
-        status.textContent='Email early access will open once our confirmation-email service is ready. No signups are being accepted yet.';
+        status.textContent='Launch interest registration is temporarily unavailable.';
         continue;
       }
       submit.disabled=false;
-      status.textContent='We will send one email to verify your address before adding you to launch updates.';
+      status.textContent=data.emailVerificationAvailable
+        ? 'We will send one verification email before subscribing you.'
+        : 'Register your launch interest and tell us your preferred design and size. Email updates are not active; this is not a verified subscription.';
     }catch{
       submit.disabled=true;
       status.textContent='Signup is temporarily unavailable. Please try again later.';
@@ -41,11 +43,17 @@ async function initWaitlist(){
         const res=await fetch('/api/early-access',{
           method:'POST',credentials:'same-origin',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({email:input.value,consent:form.querySelector('[name="consent"]').checked,website:form.querySelector('[name="website"]').value})
+          body:JSON.stringify({email:input.value,consent:form.querySelector('[name="consent"]').checked,website:form.querySelector('[name="website"]').value,design:form.querySelector('[name="design"]')?.value||'not-sure',size:form.querySelector('[name="size"]')?.value||'not-sure'})
         });
         const payload=await res.json();
         if(!res.ok)throw new Error(payload.error||'Signup is unavailable.');
-        status.textContent=payload.message||'Please check your email.';
+        status.textContent=payload.message||'Your request has been received.';
+        if(payload.cancelUrl && /^\/unsubscribe\.html\?token=[a-f0-9]{64}$/.test(payload.cancelUrl)){
+          const link=document.createElement('a');
+          link.href=payload.cancelUrl;link.textContent='Keep my private cancellation link ↗';
+          link.style.display='inline-block';link.style.marginTop='8px';
+          status.append(document.createElement('br'),link);
+        }
         form.reset();
       }catch(err){status.textContent=err.message||'Please try later.'}
       finally{submit.disabled=false}
