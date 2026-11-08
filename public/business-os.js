@@ -21,6 +21,7 @@ async function refresh(){
   el('error').textContent='';
   status('commerce-status','Checking commerce admin session…');
   status('fashion-status','Checking Fashion OS owner session…');
+  el('link-owner').disabled=true;
   try{
     const [commerce,fashion]=await Promise.allSettled([
       request('/api/admin/cofounder/overview'),request('/api/control')
@@ -34,8 +35,10 @@ async function refresh(){
     if(fashion.status==='fulfilled'&&fashion.value.ok){
       const session=fashion.value.data;
       if(session.loggedIn===true){
+        el('link-owner').disabled=false;
         status('fashion-status','Owner authenticated · '+(session.aiConnected===true?'Fashion AI provider connected':'Fashion AI provider not configured'));
       }else{
+        el('link-owner').disabled=true;
         status('fashion-status',session.initialized===true?'Fashion OS owner login required · AI '+(session.aiConnected===true?'connected':'not configured'):'Fashion OS initial setup required');
       }
     }else{
@@ -45,5 +48,19 @@ async function refresh(){
   }catch(error){el('error').textContent='Connection check failed. Please refresh and sign in to each workspace.';}
   finally{button.disabled=false;}
 }
+el('link-owner').addEventListener('click',async()=>{
+  const button=el('link-owner');
+  button.disabled=true;el('error').textContent='Verifying Fashion OS owner session…';
+  try{
+    const response=await fetch('/api/admin/fashion-login',{
+      method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'
+    });
+    const result=await response.json();
+    if(!response.ok)throw Error(result.error||'Owner verification was unsuccessful.');
+    el('error').textContent='Owner verified. Commerce unlocked for 30 minutes.';
+    await refresh();
+  }catch(error){el('error').textContent=error.message;}
+  finally{button.disabled=false;}
+});
 el('refresh').addEventListener('click',refresh);
 refresh();
