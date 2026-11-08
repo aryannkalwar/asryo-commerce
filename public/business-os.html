@@ -45,6 +45,7 @@
   <article class="card"><span class="micro">01 / Design</span><h3>AI Fashion Studio</h3><p>Create and review apparel concepts, design projects, garment imagery and approvals.</p><a class="link secondary" href="/studio">Open design studio</a></article>
   <article class="card"><span class="micro">02 / Manufacturing</span><h3>Production & Suppliers</h3><p>Manage supplier coordination, production stages, materials and quality-control tasks.</p><a class="link secondary" href="/manufacturing">Open manufacturing</a></article>
   <article class="card"><span class="micro">03 / Commerce</span><h3>Products & Orders</h3><p>Review approved product details, stock, customer orders and storefront readiness.</p><a class="link secondary" href="/admin">Open commerce admin</a></article>
+  <article class="card"><span class="micro">05 / Finance</span><h3>Cost & Profit Intelligence</h3><p>Build product-level price, freight, manufacturing and tax scenarios before spending.</p><a class="link secondary" href="/costing">Open Costing Studio</a></article>
   <article class="card"><span class="micro">04 / Intelligence</span><h3>AI Cofounder</h3><p>Assess business risks, draft campaigns and approve recommendations before execution.</p><a class="link secondary" href="/cofounder.html">Open AI Cofounder</a></article>
  </section>
  <div class="split">
@@ -68,12 +69,12 @@
    <div class="row"><strong>Cost and margins</strong><span>Operations</span></div>
    <div class="row"><strong>Team collaboration</strong><span>Restricted access</span></div>
    <div class="toplinks" style="margin-top:22px"><a class="link secondary" href="/operations">Open operations</a><a class="link secondary" href="/workspace">Sign in to Fashion OS</a></div>
-   <p class="notes">This connection check confirms whether your current Fashion OS session can access its operations API. No cross-system database sync is asserted.</p>
+   <p class="notes">Sign in as the Fashion OS owner, then select “Unlock Commerce with Fashion OS.” The owner session is verified by the existing Fashion OS service; commerce authorization lasts 30 minutes. This does not synchronize the two databases.</p>
   </section>
  </div>
  <div class="caution">All inventory changes, product publication, customer messages, tax settings and supplier purchases require permission and review. Features that need payment, courier or messaging providers remain unavailable until configured and tested.</div>
  <p id="error" role="status" aria-live="polite"></p>
- <div class="toplinks" style="margin-top:22px"><button type="button" id="refresh" class="link secondary">Refresh connections</button><a class="link secondary" href="/">Back to ASRYO storefront</a></div>
+ <div class="toplinks" style="margin-top:22px"><button type="button" id="link-owner" class="link" disabled>Unlock Commerce with Fashion OS</button><button type="button" id="refresh" class="link secondary">Refresh connections</button><a class="link secondary" href="/">Back to ASRYO storefront</a></div>
 </main>
 <script type="module" src="/business-os.js"></script>
 </body>

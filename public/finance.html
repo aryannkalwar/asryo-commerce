@@ -1,0 +1,57 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>ASRYO | Product Economics</title>
+<style>
+:root{color-scheme:dark;--bg:#111210;--panel:#20211f;--line:#48483f;--ink:#f0ede5;--mute:#b8b5ab;--gold:#dec7a0}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:20px 4%;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{font:700 29px Georgia,serif;letter-spacing:.18em}a{color:var(--gold)}
+main{max-width:1150px;margin:auto;padding:34px 4% 80px}h1{font:400 clamp(38px,5vw,58px) Georgia,serif;margin:0 0 14px}h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 18px}
+p{color:var(--mute);line-height:1.6}.columns{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(290px,1fr);gap:20px}
+.card{padding:22px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.fieldgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:block;margin:8px 0 4px;color:var(--mute);font-size:12px}
+input,select{width:100%;background:#121310;border:1px solid #625d51;border-radius:6px;padding:10px;color:var(--ink);font:inherit}
+button{font:inherit;background:var(--gold);color:#141414;padding:12px 18px;border:0;border-radius:6px;font-weight:650;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:13px 0}
+.row strong{font-variant-numeric:tabular-nums}.row:last-child{border:0}.total{font-size:22px}
+.note{border-left:3px solid var(--gold);background:#2a2721;padding:11px 15px;color:var(--mute);margin:18px 0}
+.buttons{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}#status{min-height:20px;color:var(--gold);font-size:13px}
+@media(max-width:760px){.columns{grid-template-columns:1fr}}@media(max-width:460px){.fieldgrid{grid-template-columns:1fr}}
+</style></head><body>
+<header><a href="/business-os" class="logo">ASRYO</a><a href="/business-os">Business OS</a></header>
+<main><p style="color:var(--gold);letter-spacing:.14em;text-transform:uppercase;font-size:11px">Financial intelligence / Costing Studio</p>
+<h1>Know your margin.<br>Before you manufacture.</h1>
+<p>Build a product-cost scenario for ASRYO T-shirts, hoodies and other garments. You can calculate offline immediately; saving assumptions against live product records requires ASRYO commerce administrator login.</p>
+<div class="columns">
+ <section class="card"><h2>Cost assumptions (INR)</h2><label for="product">Save against product (optional)</label>
+ <select id="product"><option value="">Manual scenario — no product selected</option></select>
+ <div class="fieldgrid">
+ <div><label for="price">Customer selling price, incl. GST (₹)</label><input id="price" type="number" min="0" max="1000000" step=".01" value="999" inputmode="decimal"></div>
+ <div><label for="gstBps">Assumed GST rate (%)</label><input id="gstBps" type="number" min="0" max="100" step=".01" value="0"></div>
+ <div><label for="fabric">Blank garment / fabric (₹)</label><input id="fabric" type="number" min="0" step=".01" value="230"></div>
+ <div><label for="printing">Printing / embroidery (₹)</label><input id="printing" type="number" min="0" step=".01" value="110"></div>
+ <div><label for="packaging">Packaging (₹)</label><input id="packaging" type="number" min="0" step=".01" value="25"></div>
+ <div><label for="inbound">Inbound freight / unit (₹)</label><input id="inbound" type="number" min="0" step=".01" value="15"></div>
+ <div><label for="shipping">Outbound shipping / unit (₹)</label><input id="shipping" type="number" min="0" step=".01" value="75"></div>
+ <div><label for="platform">Marketplace / platform fee (₹)</label><input id="platform" type="number" min="0" step=".01" value="0"></div>
+ <div><label for="payment">Payment processing (₹)</label><input id="payment" type="number" min="0" step=".01" value="0"></div>
+ <div><label for="marketing">Acquisition / marketing (₹)</label><input id="marketing" type="number" min="0" step=".01" value="80"></div>
+ <div><label for="returnBps">Return handling probability (%)</label><input id="returnBps" type="number" min="0" max="100" step=".01" value="10"></div>
+ <div><label for="returnHandling">Cost per handled return (₹)</label><input id="returnHandling" type="number" min="0" step=".01" value="120"></div>
+ </div>
+ <div class="buttons"><button id="save" type="button" disabled>Save product assumptions</button><button id="reset" type="button">Reset to zero</button></div>
+ <p id="status" role="status" aria-live="polite">Checking commerce administrator session…</p>
+ </section>
+ <section><div class="card"><h2>Contribution estimate</h2>
+ <div class="row"><span>Sale price</span><strong id="out-price">—</strong></div>
+ <div class="row"><span>Illustrative output GST</span><strong id="out-tax">—</strong></div>
+ <div class="row"><span>Production + inbound cost</span><strong id="out-cogs">—</strong></div>
+ <div class="row"><span>Shipping + selling costs</span><strong id="out-other">—</strong></div>
+ <div class="row"><span>Expected return-handling provision</span><strong id="out-return">—</strong></div>
+ <div class="row"><span>Contribution on retained sale</span><strong id="out-success">—</strong></div>
+ <div class="row"><span>Illustrative after handling provision</span><strong id="out-total" class="total">—</strong></div>
+ <div class="row"><span>Retained-sale margin / sale price</span><strong id="out-margin">—</strong></div>
+ <div class="note"><strong>Important:</strong> The return provision models handling expense only, not customer refunds, lost revenue, resale recovery, RTO or damaged stock. GST is an illustrative rate applied to the selling price, not tax advice or a filed liability.</div>
+ <p>All pre-filled costs are examples for modelling, not confirmed supplier quotes or sales prices. Choose the product and verify every amount before making a purchasing decision.</p>
+ </div></section>
+</div>
+</main><script type="module" src="/finance.js"></script></body></html>

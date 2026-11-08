@@ -78,3 +78,25 @@ Sources checked 2026-11-08:
 - **A unified UI is not yet an integrated database:** bidirectional order-to-production synchronization, financial reconciliation, and shared identity/roles remain separate engineering work.
 - The public luxury-streetwear homepage remains unchanged; only administrative navigation is expanded.
 - Do not call these Alippo's proprietary features or source; the implementation is original ASRYO code.
+
+## Finance Studio and one-owner login (November 2026)
+
+### New modules
+- `/costing`: standalone INR-unit economics calculator works without logging in and makes no API write until Save is pressed. Pre-populated sample costs are illustrative, not confirmed ASRYO procurement data.
+- `/api/admin/finance/products`: read-only product/cost/economics endpoint for authenticated commerce administrators.
+- `PUT /api/admin/finance/products/:id`: saves private unit-cost assumptions against existing products; does **not** change product selling prices, inventory, publication state, orders, cash collection, tax reporting or supplier commitments.
+- Calculation decomposes successful retained-sale contribution, GST-inclusive output tax estimate, production and selling expense, and a **handling-only** reserve for returns. It explicitly excludes refund losses, RTO, damaged stock, GST input credit and statutory tax filings.
+- `COFOUNDER_AUTO_REVIEW=false` disables the new best-effort background monitor; otherwise the running storefront scans for recommendations on startup and every six hours. Its writes are only idempotent review notes. This is NOT a guaranteed scheduler when hosting processes are asleep or unavailable.
+
+### Owner identity bridge
+- Fashion OS still owns its user identities and data. Its existing `GET /api/control` returns explicit booleans `initialized`, `loggedIn` and `aiConnected`.
+- Once an owner signs into Fashion OS through the ASRYO same-origin workspace, `POST /api/admin/fashion-login` sends the owner's signed `fashion_os_session` cookie to the hard-coded Fashion OS origin for server-side validation.
+- Only `initialized:true` and `loggedIn:true`, with a matching owner role if supplied, permits a separate, **30-minute** local commerce session. This route is same-origin, rate-limited and does not reveal tokens to the browser.
+- Do not fake Fashion OS sign-in or expose the owner cookie via JavaScript. The user must personally sign into Fashion OS to activate this feature.
+- The legacy Railway `ADMIN_EMAIL` + `ADMIN_PASSWORD` remains supported as an independent fallback, but is not required if a valid Fashion OS owner session works.
+- Revoking a Fashion OS session may leave an already-issued commerce session valid until its short expiry. Full centralized identity and shared revocation remain future work.
+
+### Still requires authorized external accounts
+- Fashion AI is currently not connected according to `/api/control`. It cannot generate model-backed artwork without its required AI provider credentials and service configuration.
+- Payment gateways, courier APIs, WhatsApp and SMTP/Resend campaigns are not connected or activated in this branch.
+- GST rate in Finance Studio is a user-supplied modelling assumption, never an automatically determined HSN/GST classification.
