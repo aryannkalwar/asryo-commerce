@@ -55,6 +55,23 @@ button.secondary{background:#35372f;color:var(--ink);border:1px solid var(--line
     <button id="create" type="submit">Prepare draft</button>
    </form>
   </div>
+  <div class="panel" style="margin-top:18px">
+    <h2>Fashion OS connection</h2>
+    <p class="small">Works through ASRYO's existing private same-origin Fashion OS gateway. Both workspaces retain their existing access controls.</p>
+    <p id="fashion-status" role="status">Connection not checked.</p>
+    <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" id="check-fashion" class="secondary">Check connection</button>
+      <a href="/workspace">Open Fashion OS</a>
+      <a href="/operations">Operations</a>
+      <a href="/manufacturing">Manufacturing</a>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:18px">
+    <h2>Automation recommendations</h2>
+    <p class="small">Run a rules-based inventory, order and launch-readiness review. Results are deduplicated per UTC day. No external actions occur.</p>
+    <button type="button" id="evaluate">Analyze current business</button>
+    <div id="automation" style="margin-top:18px">Loading recommendations…</div>
+  </div>
   <div class="panel" style="margin-top:18px"><h2>Business alerts</h2><div id="alerts">Loading…</div></div>
   <div class="panel" style="margin-top:18px"><h2>Integration readiness</h2><div id="integrations">Loading…</div></div>
  </section>
