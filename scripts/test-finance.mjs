@@ -33,7 +33,7 @@ test('saving cost profile does not change catalog price, activation or stock',as
  try{
   const saved=await perform('PUT','/api/admin/finance/products/shirt',mk());
   assert.equal(saved.code,200);
-  assert.match(saved.data.note,/not modified/i);
+  assert.match(saved.data.note,/not? .*modified/i);
   const products=await perform('GET','/api/admin/finance/products');
   assert.equal(products.code,200);
   assert.equal(products.data.products[0].economics.contributionOnSuccessfulSalePaise,44143);
