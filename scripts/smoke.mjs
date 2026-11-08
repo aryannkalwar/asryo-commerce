@@ -87,6 +87,15 @@ try {
 
   const secretMetrics=await fetch(base+'/api/admin/cofounder/overview');
   assert.equal(secretMetrics.status,401,'Cofounder business records require admin session');
+  const anonymousBridge=await fetch(base+'/api/admin/fashion-login',{
+    method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:'{}'
+  });
+  assert.equal(anonymousBridge.status,401,'Fashion OS bridge rejects unauthenticated users');
+  const noOriginBridge=await fetch(base+'/api/admin/fashion-login',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:'{}'
+  });
+  assert.equal(noOriginBridge.status,403,'Fashion OS bridge requires same-origin writes');
+
 
 
   const [health, status, catalog, adminPage, trackPage] = await Promise.all([
