@@ -70,3 +70,11 @@ Sources checked 2026-11-08:
 - Current Railway environment variable names do **not** show ADMIN_EMAIL, ADMIN_PASSWORD, OPENAI_API_KEY or payment/courier keys. Cofounder API will remain gated by the existing Railway admin session. Configure required credentials via Railway's protected settings, not GitHub or chat.
 - The Railway staging service has asryo.com attached and pre-existing staged config changes: **do not deploy, redeploy, or accept those changes casually**.
 - User-facing actions in this branch are drafts and review notes; no checkout activation, external provider API action, or operational scheduling.
+
+## Unified website entry point
+- `/business-os` is the unified private-workspace launcher, served directly by the ASRYO Node storefront, also linked from `/admin`.
+- It provides authenticated Commerce metrics through `/api/admin/cofounder/overview`, plus Fashion OS session health through the existing `/api/ops` gateway. It shows no sensitive data when either system is not authenticated.
+- Fashion OS remains hosted separately on Vercel and linked through the same-origin gateway routes `/workspace`, `/operations`, `/studio`, and `/manufacturing`.
+- **A unified UI is not yet an integrated database:** bidirectional order-to-production synchronization, financial reconciliation, and shared identity/roles remain separate engineering work.
+- The public luxury-streetwear homepage remains unchanged; only administrative navigation is expanded.
+- Do not call these Alippo's proprietary features or source; the implementation is original ASRYO code.
