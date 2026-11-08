@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="same-origin">
+  <title>ASRYO | Unified Fashion & Commerce OS</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0d0e0e;--surface:#171819;--surface2:#1e1f20;--text:#eeeae3;--muted:#b1aba2;--line:#383838;--gold:#d4c4a8}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+    a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}button{font:inherit;cursor:pointer}
+    header{padding:22px 4%;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:18px}
+    .brand{font:700 27px Georgia,serif;letter-spacing:.22em}.eyebrow,.micro{font-size:11px;text-transform:uppercase;letter-spacing:.19em;color:var(--gold)}
+    .wrap{max-width:1340px;margin:0 auto;padding:38px 4% 90px}.mast{display:flex;justify-content:space-between;align-items:end;gap:24px;flex-wrap:wrap}
+    h1{font:400 clamp(38px,6vw,72px)/1.03 Georgia,serif;letter-spacing:-.04em;margin:8px 0 15px}
+    h2{font:400 28px/1.2 Georgia,serif;margin:0 0 8px}.summary{color:var(--muted);max-width:740px;margin:0}
+    .link{display:inline-flex;align-items:center;justify-content:center;background:var(--gold);color:#161512;font-weight:700;border-radius:6px;padding:11px 14px;white-space:nowrap}
+    .link.secondary{background:var(--surface2);border:1px solid var(--line);color:var(--text)}
+    .toplinks{display:flex;gap:10px;flex-wrap:wrap}.section-title{margin:36px 0 14px;font-size:12px;letter-spacing:.17em;text-transform:uppercase;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:21px;min-width:0}
+    .card h3{font-size:17px;margin:4px 0 10px}.card p{margin:0 0 18px;color:var(--muted);font-size:13px}.card .link{width:100%;margin-top:8px;font-size:12px}
+    .status{display:inline-flex;align-items:center;gap:6px;border:1px solid #57534c;border-radius:99px;padding:4px 8px;font-size:11px;color:var(--muted);margin:8px 0 12px}
+    .status:before{content:"";height:6px;width:6px;border-radius:50%;background:var(--gold)}
+    .metric{font-size:29px;font-weight:600;letter-spacing:-.03em;margin-top:4px}
+    .metric-label{font-size:12px;color:var(--muted)}.split{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:32px}
+    .row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+    .row:last-child{border:0}.row strong{font-weight:500}.row span{color:var(--muted);text-align:right;font-size:12px}
+    .caution{margin:24px 0 0;padding:12px 17px;border-left:2px solid var(--gold);background:#24231f;color:var(--muted)}
+    .load{border:1px solid var(--line);color:var(--muted);background:var(--surface);padding:12px 15px;border-radius:7px}
+    #error{min-height:1.4em;color:var(--gold)}.notes{font-size:12px;color:var(--muted);margin:14px 0}
+    @media(max-width:960px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.split{grid-template-columns:1fr}}
+    @media(max-width:520px){header{padding:16px 4%}.brand{font-size:22px}.grid{grid-template-columns:1fr}.wrap{padding-top:25px}.card{padding:18px}}
+  </style>
+</head>
+<body>
+<header><a href="/" class="brand" aria-label="ASRYO storefront">ASRYO</a><nav class="toplinks" aria-label="Workspace"><a href="/admin">Commerce login</a><a href="/workspace">Fashion OS login</a></nav></header>
+<main class="wrap">
+ <div class="mast">
+  <div><p class="eyebrow">Beyond Ordinary · Private business workspace</p><h1>One brand.<br>One command centre.</h1><p class="summary">Design garments, coordinate production, manage commerce and review AI recommendations from a unified ASRYO workspace. Existing data remains in its authenticated systems; this hub does not merge customer databases or bypass permissions.</p></div>
+  <div class="toplinks"><a class="link" href="/workspace">Fashion OS</a><a class="link secondary" href="/cofounder.html">AI Cofounder</a></div>
+ </div>
+ <p class="section-title">Connected business areas</p>
+ <section class="grid" aria-label="Business modules">
+  <article class="card"><span class="micro">01 / Design</span><h3>AI Fashion Studio</h3><p>Create and review apparel concepts, design projects, garment imagery and approvals.</p><a class="link secondary" href="/studio">Open design studio</a></article>
+  <article class="card"><span class="micro">02 / Manufacturing</span><h3>Production & Suppliers</h3><p>Manage supplier coordination, production stages, materials and quality-control tasks.</p><a class="link secondary" href="/manufacturing">Open manufacturing</a></article>
+  <article class="card"><span class="micro">03 / Commerce</span><h3>Products & Orders</h3><p>Review approved product details, stock, customer orders and storefront readiness.</p><a class="link secondary" href="/admin">Open commerce admin</a></article>
+  <article class="card"><span class="micro">04 / Intelligence</span><h3>AI Cofounder</h3><p>Assess business risks, draft campaigns and approve recommendations before execution.</p><a class="link secondary" href="/cofounder.html">Open AI Cofounder</a></article>
+ </section>
+ <div class="split">
+  <section class="card" aria-labelledby="commerce-heading">
+   <span class="micro">ASRYO Commerce</span><h2 id="commerce-heading">Live sales overview</h2>
+   <div class="status" id="commerce-status">Checking admin session…</div>
+   <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin:8px 0 14px">
+    <div><div class="metric" id="orders">—</div><div class="metric-label">Orders</div></div>
+    <div><div class="metric" id="revenue">—</div><div class="metric-label">Collected revenue</div></div>
+    <div><div class="metric" id="sellable">—</div><div class="metric-label">Available product records</div></div>
+    <div><div class="metric" id="subscribers">—</div><div class="metric-label">Verified subscribers</div></div>
+   </div>
+   <div class="row"><strong>Storefront readiness</strong><span id="readiness">Requires admin session</span></div>
+   <a class="link secondary" href="/admin">Sign in or manage store</a>
+  </section>
+  <section class="card" aria-labelledby="fashion-heading">
+   <span class="micro">ASRYO Fashion OS</span><h2 id="fashion-heading">Creative & operations</h2>
+   <div class="status" id="fashion-status">Checking Fashion OS session…</div>
+   <div class="row"><strong>Design projects</strong><span>Fashion OS</span></div>
+   <div class="row"><strong>Production orders</strong><span>Manufacturing</span></div>
+   <div class="row"><strong>Cost and margins</strong><span>Operations</span></div>
+   <div class="row"><strong>Team collaboration</strong><span>Restricted access</span></div>
+   <div class="toplinks" style="margin-top:22px"><a class="link secondary" href="/operations">Open operations</a><a class="link secondary" href="/workspace">Sign in to Fashion OS</a></div>
+   <p class="notes">This connection check confirms whether your current Fashion OS session can access its operations API. No cross-system database sync is asserted.</p>
+  </section>
+ </div>
+ <div class="caution">All inventory changes, product publication, customer messages, tax settings and supplier purchases require permission and review. Features that need payment, courier or messaging providers remain unavailable until configured and tested.</div>
+ <p id="error" role="status" aria-live="polite"></p>
+ <div class="toplinks" style="margin-top:22px"><button type="button" id="refresh" class="link secondary">Refresh connections</button><a class="link secondary" href="/">Back to ASRYO storefront</a></div>
+</main>
+<script type="module" src="/business-os.js"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { proxyFashionOS } from './fashion-proxy.mjs';
+import { handleCofounder } from './cofounder.mjs';
 import { createReadStream, existsSync, mkdirSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -472,6 +473,7 @@ async function handle(req, res) {
       cookie(res,'asryo_admin',token,8*60*60); return json(res,200,{ok:true});
     }
     if (path.startsWith('/api/admin/')) requireAdmin(req);
+    if (path.startsWith('/api/admin/cofounder/')) return await handleCofounder({ db, req, res, path, json, jsonBody });
     if (req.method === 'POST' && path === '/api/admin/logout') {
       const raw=cookies(req).asryo_admin; if(raw) db.prepare('DELETE FROM admin_sessions WHERE token_hash=?').run(hash(raw));
       clearCookie(res,'asryo_admin'); return json(res,200,{ok:true});
@@ -530,7 +532,7 @@ async function handle(req, res) {
     }
 
     if (req.method === 'GET') {
-      const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path;
+      const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path === '/business-os' ? '/business-os.html' : path;
       const safe = normalize(filePath).replace(/^([/\\]*\.\.[/\\])+/, '');
       const full = resolve(join(root,'public',safe));
       if (!full.startsWith(resolve(join(root,'public')))) return json(res,404,{error:'Not found.'});
