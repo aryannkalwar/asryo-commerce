@@ -80,6 +80,11 @@ try {
   assert.match(hubMarkup,/\/manufacturing/,'hub links Fashion OS production');
   assert.equal((await fetch(base+'/business-os.js')).status,200,'hub JavaScript is served');
   assert.equal((await fetch(base+'/cofounder.html')).status,200,'private Cofounder shell loads');
+  assert.equal((await fetch(base+'/costing')).status,200,'product-costing route loads');
+  assert.equal((await fetch(base+'/finance.js')).status,200,'finance calculator assets load');
+  const privateFinance=await fetch(base+'/api/admin/finance/products');
+  assert.equal(privateFinance.status,401,'anonymous visitors cannot read product cost profiles');
+
   const secretMetrics=await fetch(base+'/api/admin/cofounder/overview');
   assert.equal(secretMetrics.status,401,'Cofounder business records require admin session');
 
@@ -214,6 +219,20 @@ try {
   assert.equal(authenticatedMetrics.status,200,'authenticated admin can read Cofounder metrics');
   const metricsData=await authenticatedMetrics.json();
   assert.equal(typeof metricsData.metrics.totalOrders,'number','Cofounder returns actual order count');
+  const finance=await fetch(base+'/api/admin/finance/products',{headers:{Cookie:cookie}});
+  assert.equal(finance.status,200,'admin can read costing profile records');
+  const financeProducts=(await finance.json()).products;
+  assert(Array.isArray(financeProducts)&&financeProducts.length>0,'finance profile catalog loads');
+  const financeTarget=financeProducts.find(p=>p.id===product.id);
+  assert(financeTarget,'purchased product appears in costing studio');
+  const proposed={fabric:20000,printing:7000,packaging:1500,inbound:900,shipping:6000,platform:0,payment:0,marketing:1000,returnHandling:3000,gstBps:500,returnBps:1000};
+  const saveCost=await fetch(base+'/api/admin/finance/products/'+encodeURIComponent(product.id),{
+    method:'PUT',headers:{Origin:base,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify(proposed)
+  });
+  assert.equal(saveCost.status,200,'approved admin can save a cost scenario');
+  const persistedCost=await fetch(base+'/api/admin/finance/products',{headers:{Cookie:cookie}});
+  assert.equal((await persistedCost.json()).products.find(p=>p.id===product.id).profile.fabric,20000,'costs persist in private SQLite');
+
   const reviewedAnalysis=await fetch(base+'/api/admin/cofounder/automations/evaluate',{
     method:'POST',headers:{Origin:base,Cookie:cookie,'Content-Type':'application/json'},body:'{}'
   });
