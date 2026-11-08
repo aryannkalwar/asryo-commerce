@@ -102,10 +102,11 @@ byId('check-fashion').addEventListener('click',async()=>{
   const target=byId('fashion-status');
   target.textContent='Checking existing Fashion OS session…';
   try {
-    const res=await fetch('/api/ops',{credentials:'same-origin',cache:'no-store'});
-    if(res.ok)target.textContent='Connected to Fashion OS operations through the private gateway.';
-    else if(res.status===401||res.status===403)target.textContent='Fashion OS is available but needs its separate owner sign-in.';
-    else target.textContent='Fashion OS connection could not be verified (HTTP '+res.status+').';
+    const res=await fetch('/api/control',{credentials:'same-origin',cache:'no-store'});
+    if(res.ok){
+      const identity=await res.json();
+      target.textContent=identity.loggedIn===true?'Fashion OS owner connected; AI '+(identity.aiConnected===true?'configured.':'provider not configured.'):'Fashion OS owner login required.';
+    }else target.textContent='Fashion OS identity service unavailable (HTTP '+res.status+').';
   }catch{target.textContent='Fashion OS is not reachable through this gateway.';}
 });
 
