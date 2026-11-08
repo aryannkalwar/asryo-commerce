@@ -2,6 +2,7 @@
 // This module generates reviewable business drafts. It never sends messages,
 // changes prices, publishes listings, or alters stock automatically.
 import { randomUUID } from 'node:crypto';
+import { getCofounderAutomations, evaluateCofounderAutomations, reviewCofounderAutomation } from './cofounder-automation.mjs';
 
 const KIND = new Set(['seo','listing','campaign','social','email','automation']);
 const STATUS = new Set(['draft','approved','archived']);
@@ -131,6 +132,18 @@ function draftRow(row) {
 
 export async function handleCofounder({ db, req, res, path, json, jsonBody }) {
   initialize(db);
+  if (req.method === 'GET' && path === '/api/admin/cofounder/automations') {
+    return json(res,200,getCofounderAutomations(db));
+  }
+  if (req.method === 'POST' && path === '/api/admin/cofounder/automations/evaluate') {
+    return json(res,200,evaluateCofounderAutomations(db));
+  }
+  const eventMatch=path.match(/^\/api\/admin\/cofounder\/automations\/([a-f0-9-]{36})$/i);
+  if (req.method === 'PATCH' && eventMatch) {
+    const input=await jsonBody(req,512);
+    const output=reviewCofounderAutomation(db,eventMatch[1],input?.status);
+    return json(res,output.code || 200,output);
+  }
   if (req.method === 'GET' && path === '/api/admin/cofounder/overview') {
     return json(res,200,overview(db));
   }
