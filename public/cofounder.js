@@ -51,6 +51,64 @@ function renderOverview(data) {
   });
 }
 
+function renderAutomations(events) {
+  const root=byId('automation');
+  root.replaceChildren();
+  if (!events.length) {
+    root.append(make('p','No recommendations recorded yet. Run a business analysis.'));
+    return;
+  }
+  for (const event of events) {
+    const item=make('article',undefined,'draft');
+    add(item,make('span',event.priority.toUpperCase(),'pill'),make('h3',event.title),
+      make('p',event.detail),make('div',event.status.toUpperCase()+' · '+event.businessDay,'meta'));
+    const buttons=make('div',undefined,'actions');
+    if (event.status==='pending') {
+      const reviewed=make('button','Mark reviewed');
+      reviewed.type='button';
+      reviewed.addEventListener('click',()=>changeAutomation(event.id,'reviewed'));
+      const dismiss=make('button','Dismiss');
+      dismiss.className='secondary';dismiss.type='button';
+      dismiss.addEventListener('click',()=>changeAutomation(event.id,'dismissed'));
+      add(buttons,reviewed,dismiss);
+    }
+    item.append(buttons);
+    root.append(item);
+  }
+}
+async function refreshAutomations() {
+  const result=await api('/api/admin/cofounder/automations');
+  renderAutomations(result.events);
+}
+async function changeAutomation(id,status) {
+  try {
+    const result=await api('/api/admin/cofounder/automations/'+encodeURIComponent(id),
+      {method:'PATCH',body:JSON.stringify({status})});
+    renderAutomations(result.events);
+    signal(result.note);
+  }catch(error){signal(error.message);}
+}
+byId('evaluate').addEventListener('click',async()=>{
+  const button=byId('evaluate');button.disabled=true;
+  try {
+    const result=await api('/api/admin/cofounder/automations/evaluate',
+      {method:'POST',body:'{}'});
+    renderAutomations(result.events);
+    signal('Analyzed '+result.evaluated+' conditions. Added '+result.newRecommendations+' review items.');
+  }catch(error){signal(error.message);}
+  finally{button.disabled=false;}
+});
+byId('check-fashion').addEventListener('click',async()=>{
+  const target=byId('fashion-status');
+  target.textContent='Checking existing Fashion OS session…';
+  try {
+    const res=await fetch('/api/ops',{credentials:'same-origin',cache:'no-store'});
+    if(res.ok)target.textContent='Connected to Fashion OS operations through the private gateway.';
+    else if(res.status===401||res.status===403)target.textContent='Fashion OS is available but needs its separate owner sign-in.';
+    else target.textContent='Fashion OS connection could not be verified (HTTP '+res.status+').';
+  }catch{target.textContent='Fashion OS is not reachable through this gateway.';}
+});
+
 function renderDrafts(drafts) {
   const root = byId('drafts');
   root.replaceChildren();
@@ -114,6 +172,7 @@ async function initialize() {
       list.append(option);
     });
     renderDrafts(drafts.drafts);
+    await refreshAutomations();
   } catch (error) { signal(error.message); }
 }
 byId('draft-form').addEventListener('submit', async event => {
