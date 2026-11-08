@@ -555,7 +555,7 @@ async function handle(req, res) {
 
 // Best-effort in-process daily recommendation monitor; no external actions.
 // Unique database constraints make multiple replicas idempotent.
-if (process.env.NODE_ENV !== 'test' && process.env.COFUNDER_AUTO_REVIEW !== 'false') {
+if (process.env.NODE_ENV !== 'test' && process.env.COFOUNDER_AUTO_REVIEW !== 'false') {
   const scan=()=>{try{evaluateCofounderAutomations(db)}catch(error){
     console.error('cofounder_monitor_failed',{type:error?.name||'Error'});
   }};
