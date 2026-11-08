@@ -69,12 +69,12 @@
    <div class="row"><strong>Cost and margins</strong><span>Operations</span></div>
    <div class="row"><strong>Team collaboration</strong><span>Restricted access</span></div>
    <div class="toplinks" style="margin-top:22px"><a class="link secondary" href="/operations">Open operations</a><a class="link secondary" href="/workspace">Sign in to Fashion OS</a></div>
-   <p class="notes">This connection check confirms whether your current Fashion OS session can access its operations API. No cross-system database sync is asserted.</p>
+   <p class="notes">Sign in as the Fashion OS owner, then select “Unlock Commerce with Fashion OS.” The owner session is verified by the existing Fashion OS service; commerce authorization lasts 30 minutes. This does not synchronize the two databases.</p>
   </section>
  </div>
  <div class="caution">All inventory changes, product publication, customer messages, tax settings and supplier purchases require permission and review. Features that need payment, courier or messaging providers remain unavailable until configured and tested.</div>
  <p id="error" role="status" aria-live="polite"></p>
- <div class="toplinks" style="margin-top:22px"><button type="button" id="refresh" class="link secondary">Refresh connections</button><a class="link secondary" href="/">Back to ASRYO storefront</a></div>
+ <div class="toplinks" style="margin-top:22px"><button type="button" id="link-owner" class="link" disabled>Unlock Commerce with Fashion OS</button><button type="button" id="refresh" class="link secondary">Refresh connections</button><a class="link secondary" href="/">Back to ASRYO storefront</a></div>
 </main>
 <script type="module" src="/business-os.js"></script>
 </body>
