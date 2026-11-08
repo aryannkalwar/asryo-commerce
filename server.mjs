@@ -532,7 +532,7 @@ async function handle(req, res) {
     }
 
     if (req.method === 'GET') {
-      const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path;
+      const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path === '/business-os' ? '/business-os.html' : path;
       const safe = normalize(filePath).replace(/^([/\\]*\.\.[/\\])+/, '');
       const full = resolve(join(root,'public',safe));
       if (!full.startsWith(resolve(join(root,'public')))) return json(res,404,{error:'Not found.'});
