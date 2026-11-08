@@ -72,6 +72,17 @@ try {
   assert.match(page.headers.get('content-security-policy') || '', /frame-ancestors 'none'/, 'security headers are set');
   assert.doesNotMatch(page.headers.get('content-security-policy') || '', /razorpay/i, 'payment provider is absent from the browser policy');
   assert.match(await page.text(), /ASRYO/);
+  const unifiedHub=await fetch(base+'/business-os');
+  assert.equal(unifiedHub.status,200,'consolidated business workspace loads');
+  const hubMarkup=await unifiedHub.text();
+  assert.match(hubMarkup,/One command centre/,'unified hub identifies ASRYO workspace');
+  assert.match(hubMarkup,/\/cofounder\.html/,'hub links AI Cofounder');
+  assert.match(hubMarkup,/\/manufacturing/,'hub links Fashion OS production');
+  assert.equal((await fetch(base+'/business-os.js')).status,200,'hub JavaScript is served');
+  assert.equal((await fetch(base+'/cofounder.html')).status,200,'private Cofounder shell loads');
+  const secretMetrics=await fetch(base+'/api/admin/cofounder/overview');
+  assert.equal(secretMetrics.status,401,'Cofounder business records require admin session');
+
 
   const [health, status, catalog, adminPage, trackPage] = await Promise.all([
     fetch(`${base}/healthz`), fetch(`${base}/api/status`), fetch(`${base}/api/products`),
@@ -199,6 +210,22 @@ try {
   assert.equal(login.status, 200, 'admin can sign in to manage COD orders');
   const cookie = login.headers.get('set-cookie')?.split(';')[0];
   assert(cookie, 'admin session cookie is issued');
+  const authenticatedMetrics=await fetch(base+'/api/admin/cofounder/overview',{headers:{Cookie:cookie}});
+  assert.equal(authenticatedMetrics.status,200,'authenticated admin can read Cofounder metrics');
+  const metricsData=await authenticatedMetrics.json();
+  assert.equal(typeof metricsData.metrics.totalOrders,'number','Cofounder returns actual order count');
+  const reviewedAnalysis=await fetch(base+'/api/admin/cofounder/automations/evaluate',{
+    method:'POST',headers:{Origin:base,Cookie:cookie,'Content-Type':'application/json'},body:'{}'
+  });
+  assert.equal(reviewedAnalysis.status,200,'admin can run manual read-only business analysis');
+  const analysisData=await reviewedAnalysis.json();
+  assert(analysisData.events.length>0,'the review engine creates recommendations');
+  const analysisRetry=await fetch(base+'/api/admin/cofounder/automations/evaluate',{
+    method:'POST',headers:{Origin:base,Cookie:cookie,'Content-Type':'application/json'},body:'{}'
+  });
+  assert.equal(analysisRetry.status,200);
+  assert.equal((await analysisRetry.json()).newRecommendations,0,'repeated analysis does not create duplicate recommendations');
+
   const cancelled = await fetch(`${base}/api/admin/orders/${encodeURIComponent(order.orderId)}`, {
     method: 'PATCH', headers: { Origin: base, Cookie: cookie, 'Content-Type': 'application/json' },
     body: JSON.stringify({ status: 'cancelled' }),
