@@ -22,6 +22,10 @@ Sources checked 2026-11-08:
 - Persisted draft/approved/archived states and copy actions
 - No externally dispatched messages, no automatic promotions, no publication
 - Test coverage for revenue metrics, stock non-mutation and invalid inputs
+- On-demand review engine: low-stock warnings, processing orders older than 48 hours, store-closed checks, verified-subscriber checks
+- Idempotent per-day recommendation queue with reviewed/dismissed states; no external side effects
+- Same-origin Fashion OS portal links and an explicit owner-session connection check through /api/ops
+
 
 ## Not yet implemented — requires real provider integrations and QA
 | Module | Implementation requirement |
@@ -58,3 +62,11 @@ Sources checked 2026-11-08:
 - The word `approved` means a human reviewed a proposal, **not** that the system dispatched it.
 - No invented discounts, prices, stock, materials, testimonials or tax claims.
 - This branch does not modify `STORE_READY`, activate stock or publish the public store.
+
+## Current deployment and authentication constraints (2026-11-08)
+- GitHub implementation exists in the feature branch; it is not yet merged or deployed.
+- The original ASRYO Fashion OS deployed on Vercel has its own owner session and operations data; the storefront already proxies private workspace paths to Fashion OS.
+- The Cofounder UI can check that the browser's Fashion OS session reaches /api/ops. It **does not** yet synchronize operational data, credentials, or inventory between independent backends.
+- Current Railway environment variable names do **not** show ADMIN_EMAIL, ADMIN_PASSWORD, OPENAI_API_KEY or payment/courier keys. Cofounder API will remain gated by the existing Railway admin session. Configure required credentials via Railway's protected settings, not GitHub or chat.
+- The Railway staging service has asryo.com attached and pre-existing staged config changes: **do not deploy, redeploy, or accept those changes casually**.
+- User-facing actions in this branch are drafts and review notes; no checkout activation, external provider API action, or operational scheduling.
