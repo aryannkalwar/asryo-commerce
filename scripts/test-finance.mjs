@@ -38,7 +38,7 @@ test('saving cost profile does not change catalog price, activation or stock',as
   assert.equal(products.code,200);
   assert.equal(products.data.products[0].economics.contributionOnSuccessfulSalePaise,44143);
   assert.equal(db.prepare("SELECT price_paise,stock,active FROM products WHERE id='shirt'").get().stock,8);
-  assert.deepEqual(db.prepare("SELECT price_paise,stock,active FROM products WHERE id='shirt'").get(),{price_paise:99900,stock:8,active:0});
+  assert.deepEqual({...db.prepare("SELECT price_paise,stock,active FROM products WHERE id='shirt'").get()},{price_paise:99900,stock:8,active:0});
   const invalid=await perform('PUT','/api/admin/finance/products/shirt',{...mk(),payment:-5});
   assert.equal(invalid.code,400);
   assert.equal((await perform('GET','/api/admin/finance/products')).data.products[0].profile.payment,2000);
