@@ -3,6 +3,7 @@ import { proxyFashionOS } from './fashion-proxy.mjs';
 import { handleCofounder } from './cofounder.mjs';
 import { handleFinance } from './commerce-finance.mjs';
 import { evaluateCofounderAutomations } from './cofounder-automation.mjs';
+import { verifyFashionOwnerCookie } from './fashion-owner-sso.mjs';
 import { createReadStream, existsSync, mkdirSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -180,12 +181,12 @@ function cookies(req) {
 }
 
 function cookie(res, name, value, maxAge) {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const secure = process.env.NODE_ENV === 'production' || String(process.env.APP_ORIGIN||'').startsWith('https://') ? '; Secure' : '';
   res.setHeader('Set-Cookie', `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`);
 }
 
 function clearCookie(res, name) {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const secure = process.env.NODE_ENV === 'production' || String(process.env.APP_ORIGIN||'').startsWith('https://') ? '; Secure' : '';
   res.setHeader('Set-Cookie', `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`);
 }
 
@@ -311,7 +312,8 @@ async function handle(req, res) {
     if (path.startsWith('/api/') && req.method !== 'GET') requireSameOrigin(req);
     const limits = {
       '/api/auth/login': [8, 15*60*1000], '/api/auth/register': [5, 60*60*1000],
-      '/api/admin/login': [8, 15*60*1000], '/api/assistant': [30, 60*1000],
+      '/api/admin/login': [8, 15*60*1000],
+      '/api/admin/fashion-login': [8, 15*60*1000], '/api/assistant': [30, 60*1000],
       '/api/checkout/orders': [10, 15*60*1000],
       '/api/early-access': [4, 60*60*1000],
     };
@@ -473,6 +475,19 @@ async function handle(req, res) {
       if(!adminEmail || email!==adminEmail || saved.length<24 || !secureEqText(String(input.password||''),saved)) return json(res,401,{error:'Admin credentials are incorrect or not configured.'});
       const token=randomBytes(32).toString('base64url'); db.prepare('INSERT INTO admin_sessions(token_hash,expires_at,created_at) VALUES(?,?,?)').run(hash(token),Date.now()+8*60*60*1000,now());
       cookie(res,'asryo_admin',token,8*60*60); return json(res,200,{ok:true});
+    }
+    // A Fashion OS owner can obtain a short-lived commerce admin session.
+    // Authorization is checked by the existing Vercel Fashion OS authority.
+    if (req.method === 'POST' && path === '/api/admin/fashion-login') {
+      let fashionSession='';
+      try { fashionSession=cookies(req).fashion_os_session||''; } catch {}
+      if(!await verifyFashionOwnerCookie(fashionSession))
+        return json(res,401,{error:'Sign in as the Fashion OS owner before unlocking Commerce.'});
+      const token=randomBytes(32).toString('base64url');
+      db.prepare('INSERT INTO admin_sessions(token_hash,expires_at,created_at) VALUES(?,?,?)')
+        .run(hash(token),Date.now()+30*60*1000,now());
+      cookie(res,'asryo_admin',token,30*60);
+      return json(res,200,{ok:true,expiresInMinutes:30,mode:'fashion-owner-verified'});
     }
     if (path.startsWith('/api/admin/')) requireAdmin(req);
     if (path.startsWith('/api/admin/cofounder/')) return await handleCofounder({ db, req, res, path, json, jsonBody });
