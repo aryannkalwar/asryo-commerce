@@ -8,6 +8,6 @@
   },
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check cofounder.mjs && node --check cofounder-automation.mjs && node --check public/cofounder.js && node --check public/business-os.js && node --test scripts/test-cofounder.mjs && node --check public/sw.js && node --check fashion-proxy.mjs && node --check public/editorial.js && node --check public/app.js && node --check public/concept-visuals.js && node --check public/admin.js && node --check public/track.js && node --check public/policies.js && node scripts/smoke.mjs && node scripts/test-fashion-proxy.mjs && node scripts/test-pwa-security.mjs"
+    "check": "node --check server.mjs && node --check cofounder.mjs && node --check commerce-finance.mjs && node --check cofounder-automation.mjs && node --check public/cofounder.js && node --check public/business-os.js && node --check public/finance.js && node --test scripts/test-finance.mjs && node --test scripts/test-cofounder.mjs && node --check public/sw.js && node --check fashion-proxy.mjs && node --check public/editorial.js && node --check public/app.js && node --check public/concept-visuals.js && node --check public/admin.js && node --check public/track.js && node --check public/policies.js && node scripts/smoke.mjs && node scripts/test-fashion-proxy.mjs && node scripts/test-pwa-security.mjs"
   }
 }
