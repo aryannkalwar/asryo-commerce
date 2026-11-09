@@ -1,4 +1,4 @@
-import {calculateSampleEconomics} from './sample-planner-core.mjs';
+import {calculateSampleEconomics} from './sample-planner-core.js';
 const form = document.getElementById('sample-form');
 const message = document.getElementById('message');
 const results = document.getElementById('results');
