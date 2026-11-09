@@ -11,7 +11,7 @@ export async function renderInventory(){
   box().innerHTML=`<p role="status">${data.skus.length} size SKUs · ${pending} awaiting a confirmed count · ${low} stock alerts</p>
   <details><summary>Create a size / colour SKU</summary><p>Choose an unpublished design with no stock. Each combination is a separate cart/order line. Price and stock remain unconfirmed; creating a SKU does not open checkout or publish it. Artwork uses the parent’s approved snapshot.</p>
   <form id="skuCreate" class="stack-form"><label>Parent design<select name="parentProductId" required><option value="">Select a design</option>${parents.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></label>
-  <label>Unique SKU<input name="sku" maxlength="48" pattern="[A-Za-z0-9][A-Za-z0-9_-]{1,47}" required></label>
+  <label>Unique SKU<input name="sku" maxlength="48" pattern="[A-Za-z0-9](?:[A-Za-z0-9_]|-){1,47}" required></label>
   <label>Size<input name="size" maxlength="24" required placeholder="Enter confirmed size"></label><label>Colour<input name="colour" maxlength="40" required placeholder="Enter confirmed colour"></label>
   <label>Low-stock threshold (optional)<input name="reorderPoint" type="number" min="0" max="100000" step="1" placeholder="Not set"></label>
   <button type="submit" class="button button-outline">Create unpublished SKU</button><p class="form-message" role="status"></p></form></details>
