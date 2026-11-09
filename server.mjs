@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { proxyFashionOS } from './fashion-proxy.mjs';
 import { handleCofounder } from './cofounder.mjs';
 import { handleFinance } from './commerce-finance.mjs';
+import { handleStudio, renderImportedProduct } from './fashion-studio.mjs';
 import { evaluateCofounderAutomations } from './cofounder-automation.mjs';
 import { verifyFashionOwnerCookie } from './fashion-owner-sso.mjs';
 import { createReadStream, statSync, mkdirSync } from 'node:fs';
@@ -86,7 +87,7 @@ const hash = value => createHash('sha256').update(value).digest('hex');
 const publicBase = path => `${(process.env.APP_ORIGIN || '').replace(/\/$/, '')}${path}`;
 const productRow = row => ({
   id: row.id, name: row.name, category: row.category, type: row.type,
-  image: `/assets/${encodeURIComponent(row.image)}`, description: row.description,
+  image: row.image.startsWith('studio:') ? `/api/products/${encodeURIComponent(row.id)}/image` : `/assets/${encodeURIComponent(row.image)}`, description: row.description,
   pricePaise: row.price_paise, stock: row.stock, active: Boolean(row.active),
   options: JSON.parse(row.options_json || '[]'),
 });
@@ -233,8 +234,8 @@ async function sendVerification(email, token) {
   if (!response.ok) throw Object.assign(new Error('Verification email could not be sent'), { status: 503 });
 }
 
-function allProducts() {
-  return db.prepare('SELECT * FROM products ORDER BY category, name').all().map(productRow);
+function allProducts(includePrivateDrafts = true) {
+  return db.prepare(`SELECT * FROM products ${includePrivateDrafts ? '' : "WHERE image NOT LIKE 'studio:%' OR active=1"} ORDER BY category, name`).all().map(productRow);
 }
 
 function publicOrder(order) {
@@ -327,6 +328,8 @@ async function handle(req, res) {
       '/api/early-access': [4, 60*60*1000],
     };
     if (req.method === 'POST' && limits[path] && !rateLimit(req, res, path, ...limits[path])) return;
+    if (path.startsWith('/api/admin/designs') && !['GET','HEAD'].includes(req.method)
+      && !rateLimit(req,res,'studio-write',120,60*1000)) return;
 
     if (req.method === 'GET' && path === '/api/status') {
       const available = db.prepare('SELECT COUNT(*) AS n FROM products WHERE active=1 AND price_paise>0 AND stock>0').get().n;
@@ -407,7 +410,20 @@ async function handle(req, res) {
       return json(res,200,{message:'You have been unsubscribed from ASRYO launch updates.'});
     }
 
-    if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: HIDE_PUBLIC_PRODUCTS ? [] : allProducts() });
+    if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: HIDE_PUBLIC_PRODUCTS ? [] : allProducts(false) });
+
+    const productImage = path.match(/^\/api\/products\/([a-zA-Z0-9-]{1,100})\/image$/);
+    if (req.method === 'GET' && productImage) {
+      const product = db.prepare('SELECT active FROM products WHERE id=?').get(productImage[1]);
+      if (!product) return json(res,404,{error:'Product image not found.'});
+      if (HIDE_PUBLIC_PRODUCTS || !product.active) requireAdmin(req);
+      const svg = renderImportedProduct(db,productImage[1]);
+      if (!svg) return json(res,404,{error:'Product image not found.'});
+      res.setHeader('Content-Type','image/svg+xml; charset=utf-8');
+      res.setHeader('Cache-Control','private, no-store');
+      res.setHeader('Content-Security-Policy',"default-src 'none'; img-src data:; sandbox");
+      res.statusCode=200; return res.end(svg);
+    }
 
     if (req.method === 'POST' && path === '/api/assistant') {
       const { question = '' } = await jsonBody(req, 12 * 1024);
@@ -499,6 +515,7 @@ async function handle(req, res) {
       return json(res,200,{ok:true,expiresInMinutes:30,mode:'fashion-owner-verified'});
     }
     if (path.startsWith('/api/admin/')) requireAdmin(req);
+    if (path === '/api/admin/designs' || path.startsWith('/api/admin/designs/')) return await handleStudio({db,req,res,path,json,jsonBody});
     if (path.startsWith('/api/admin/cofounder/')) return await handleCofounder({ db, req, res, path, json, jsonBody });
     if (path.startsWith('/api/admin/finance/')) return await handleFinance({ db, req, res, path, json, jsonBody });
     if (req.method === 'POST' && path === '/api/admin/logout') {
@@ -559,7 +576,7 @@ async function handle(req, res) {
     }
 
     if (req.method === 'GET') {
-      const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path === '/business-os' ? '/business-os.html' : path === '/costing' ? '/finance.html' : path;
+      const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path === '/business-os' ? '/business-os.html' : path === '/costing' ? '/finance.html' : path === '/design-studio' ? '/design-studio.html' : path;
       const safe = normalize(filePath).replace(/^([/\\]*\.\.[/\\])+/, '');
       const full = resolve(join(root,'public',safe));
       const publicRoot = resolve(join(root,'public'));
@@ -572,6 +589,10 @@ async function handle(req, res) {
       if (!file.isFile()) return json(res,404,{error:'Not found.'});
       setHeaders(res,mime[extname(full)] || 'application/octet-stream');
       res.setHeader('Cache-Control', ['.html','.js','.css'].includes(extname(full)) ? 'no-cache' : 'public, max-age=86400, stale-while-revalidate=604800');
+      if (['/design-studio.html','/design-studio.js','/design-studio.css','/studio-render.js'].includes(filePath)) {
+        res.setHeader('Cache-Control','private, no-store');
+        res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
+      }
       res.statusCode=200;
       const stream = createReadStream(full);
       stream.on('error', () => {

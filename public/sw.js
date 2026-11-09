@@ -13,7 +13,7 @@ const PUBLIC_PAGES=new Set([
 const PRIVATE_PATHS=new Set([
  '/admin','/admin.html','/workspace','/workspace.html',
  '/fashion-os','/dashboard','/dashboard.html',
- '/studio','/operations','/operations.html',
+ '/design-studio','/design-studio.html','/design-studio.js','/design-studio.css','/studio-render.js','/studio','/operations','/operations.html',
  '/manufacturing','/team','/team.html',
  '/track.html','/unsubscribe.html','/early-access-confirmed.html'
 ]);

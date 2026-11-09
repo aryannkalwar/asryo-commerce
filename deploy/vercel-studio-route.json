@@ -1,0 +1,18 @@
+{
+  "projectId": "prj_EgFyx9LqgSpbWAkYEGHPPY7eNEKA",
+  "routeId": "e28ba3bf-85d0-4615-a697-b0da7a2d8878",
+  "name": "ASRYO integrated design studio",
+  "srcSyntax": "regex",
+  "route": {
+    "src": "^/design-studio(?:\\.html)?$",
+    "has": [
+      {
+        "type": "host",
+        "value": "asryo-vercel-storefront.vercel.app"
+      }
+    ],
+    "dest": "https://asryo.com/design-studio",
+    "status": 307
+  },
+  "notes": "Additive alias-only redirect to the canonical ASRYO editor. Same-origin writes remain restricted. Preserve the existing survey route and original Fashion OS handlers. Promote after Railway succeeds; restore the preceding Vercel route version to roll back. This is not a DNS cutover."
+}
