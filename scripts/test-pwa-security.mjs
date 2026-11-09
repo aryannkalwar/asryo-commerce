@@ -23,13 +23,13 @@ function intercepted(path,mode='navigate',destination='document'){
   handlers.fetch({request,respondWith(p){received=true;pending.push(Promise.resolve(p))}});
   return received;
 }
-for(const path of ['/design-studio','/design-studio.html','/api/admin/designs','/workspace','/studio','/fashion-os','/manufacturing','/admin',
+for(const path of ['/inventory.js','/api/admin/inventory','/design-studio','/design-studio.html','/api/admin/designs','/workspace','/studio','/fashion-os','/manufacturing','/admin',
  '/unsubscribe.html?token=private','/track.html','/api/control?action=state',
  '/api/team?action=status','/api/admin/orders','/api/checkout/orders',
  '/api/creative?action=art&id=secret','/src-internal/control.js'])
  assert.equal(intercepted(path),false,'Private request intercepted by worker: '+path);
 assert.equal(intercepted('/api/status','cors',''),true,'Public store status remains available offline');
-for(const path of ['/design-studio.js','/design-studio.css','/studio-render.js'])
+for(const path of ['/admin.js','/admin.css','/inventory.js','/design-studio.js','/design-studio.css','/studio-render.js'])
  assert.equal(intercepted(path,'cors','script'),false,'Private editor assets stay current and network-only');
 assert.equal(intercepted('/api/products','cors',''),true,'Public catalog remains available offline');
 assert.equal(intercepted('/','navigate','document'),true,'Public homepage remains available offline');
