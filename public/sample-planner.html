@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+ <meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="same-origin">
+ <title>ASRYO | Sample-First Sourcing Planner</title>
+ <style>
+ :root{color-scheme:dark;--bg:#0d0e0e;--panel:#18191a;--line:#393a3a;--gold:#d4c4a8;--text:#f0ede8;--muted:#b5b1aa}
+ *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 system-ui,sans-serif}
+ main{max-width:1130px;margin:auto;padding:32px 22px 70px}header{border-bottom:1px solid var(--line);padding:17px 22px;display:flex;justify-content:space-between;gap:18px}
+ a{color:var(--gold)}h1{font:400 clamp(35px,5vw,59px)/1.1 Georgia,serif;margin:8px 0 12px}
+ h2{font:400 26px Georgia,serif;margin:0 0 16px}.intro{color:var(--muted);max-width:770px}
+ .eyebrow{color:var(--gold);text-transform:uppercase;letter-spacing:.16em;font-size:11px}
+ .layout{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;margin-top:28px}
+ .panel{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:22px}
+ .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+ label{display:block;color:var(--muted);font-size:12px}input,select{width:100%;font:inherit;margin-top:5px;padding:11px;color:var(--text);background:#101112;border:1px solid #555;border-radius:6px}
+ button{cursor:pointer;border:0;background:var(--gold);color:#161513;padding:13px 20px;border-radius:6px;font-weight:700;margin-top:20px}
+ .result{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding:11px 0}.result span{color:var(--muted)}.result strong{text-align:right}
+ .qa label{font-size:13px;display:flex;gap:10px;align-items:flex-start;margin:13px 0}.qa input{width:auto;margin-top:4px}
+ .hint{font-size:12px;color:var(--muted)}#message{min-height:1.6em;color:var(--gold);margin-top:14px}
+ .small-title{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin:25px 0 12px}
+ @media(max-width:760px){.layout{grid-template-columns:1fr}}@media(max-width:420px){.form-grid{grid-template-columns:1fr}.panel{padding:17px}}
+ </style>
+</head>
+<body>
+<header><strong>ASRYO · BEYOND ORDINARY</strong><a href="/business-os">Business OS</a></header>
+<main>
+ <div class="eyebrow">Private planning tools · research before purchasing</div>
+ <h1>Sample-first sourcing</h1>
+ <p class="intro">Plan a 1–20-piece T-shirt or hoodie trial, compare your actual quoted costs with a proposed retail price and inspect a physical sample before production. This calculator never orders products, edits stock or publishes designs. Values are not stored or transmitted.</p>
+ <div class="layout">
+ <section class="panel">
+ <h2>Pilot cost scenario</h2>
+ <form id="sample-form">
+ <div class="form-grid">
+  <label>Pilot quantity (1–20)<input id="quantity" type="number" min="1" max="20" step="1" value="10" required></label>
+  <label>Blank garment / pc (₹)<input id="blank" type="number" placeholder="Enter supplier quote" min="0" step=".01" required></label>
+  <label>Print / pc (₹)<input id="printing" type="number" min="0" step=".01" value="0" required></label>
+  <label>Label / pc (₹)<input id="labels" type="number" min="0" step=".01" value="0" required></label>
+  <label>Packaging / pc (₹)<input id="packaging" type="number" min="0" step=".01" value="0" required></label>
+  <label>Inbound freight (entire batch, ₹)<input id="freight" type="number" min="0" step=".01" value="0" required></label>
+  <label>Additional supplier invoice tax not already in quoted prices (entire batch, ₹)<input id="extra-tax" type="number" min="0" step=".01" value="0" required></label>
+  <label>Proposed retail price / pc (₹, inclusive of GST)<input id="retail" type="number" min=".01" step=".01" placeholder="Your proposed price" required></label>
+  <label>Illustrative output GST rate<select id="gst"><option value="500">5% — garments up to ₹2,500/piece</option><option value="1800">18% — garments above ₹2,500/piece</option><option value="0">0% — hypothetical scenario only</option></select></label>
+  <label>Outbound delivery / sale (₹)<input id="shipping" type="number" min="0" step=".01" value="0" required></label>
+  <label>Marketplace / payment fees per sale (₹)<input id="fees" type="number" min="0" step=".01" value="0" required></label>
+  <label>Marketing per sale (₹)<input id="marketing" type="number" min="0" step=".01" value="0" required></label>
+  <label>Estimated returns reserve / sale (₹)<input id="returns" type="number" min="0" step=".01" value="0" required></label>
+ </div>
+ <button type="submit">Calculate scenario</button><p id="message" role="status" aria-live="polite"></p>
+ </form>
+ <p class="hint">Invoice tax is an extra cash cost only when not included in the other quote fields. Net tax liability, input tax credits, refunds, RTO losses and platform-specific fee changes are not calculated. GST treatment requires accountant confirmation.</p>
+ </section>
+ <div>
+ <section id="results" class="panel" hidden>
+ <h2>Illustrative outcome</h2>
+ <div class="result"><span>Gross pilot cash outlay</span><strong id="budget"></strong></div>
+ <div class="result"><span>Landed cost / piece</span><strong id="landed"></strong></div>
+ <div class="result"><span>Embedded output GST / sale</span><strong id="sale-gst"></strong></div>
+ <div class="result"><span>Other sale costs / sale</span><strong id="sale-costs"></strong></div>
+ <div class="result"><span>Contribution / sale</span><strong id="contribution"></strong></div>
+ <div class="result"><span>Contribution margin</span><strong id="margin"></strong></div>
+ <p class="hint">A scenario is not a supplier commitment or forecast. Piloting has separate one-time development and testing costs.</p>
+ </section>
+ <section class="panel qa">
+ <h2>Physical sample QA</h2>
+ <p class="hint">Check every item on actual garments; these are manual notes for your evaluation, not an automatic approval or stored certificate.</p>
+ <label><input type="checkbox">Confirm 100% combed compact cotton / stated blend against invoice and feel</label>
+ <label><input type="checkbox">Weigh garment to verify claimed GSM and record tolerance</label>
+ <label><input type="checkbox">Measure chest, length, sleeve and size consistency</label>
+ <label><input type="checkbox">Check neck rib recovery, stitching and seams</label>
+ <label><input type="checkbox">Wash test for shrinkage, bleeding, pilling and shape</label>
+ <label><input type="checkbox">Test DTF / screen / puff print feel and durability after washing</label>
+ <p class="hint">Do not release production quantity until sample approval, supplier identity, terms, invoice and actual budget are reviewed.</p>
+ </section>
+ </div>
+ </div>
+</main>
+<script type="module" src="/sample-planner.js"></script>
+</body></html>
