@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { proxyFashionOS } from './fashion-proxy.mjs';
 import { handleCofounder } from './cofounder.mjs';
+import {initInventory,skuMetadata,hasSkus,recordStockMovement,handleInventory} from './inventory.mjs';
 import { handleFinance } from './commerce-finance.mjs';
 import { handleStudio, renderImportedProduct } from './fashion-studio.mjs';
 import { evaluateCofounderAutomations } from './cofounder-automation.mjs';
@@ -82,6 +83,8 @@ if (!db.prepare('PRAGMA table_info(orders)').all().some(column => column.name ==
   db.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'legacy_online'");
 }
 
+initInventory(db);
+
 const now = () => new Date().toISOString();
 const hash = value => createHash('sha256').update(value).digest('hex');
 const publicBase = path => `${(process.env.APP_ORIGIN || '').replace(/\/$/, '')}${path}`;
@@ -90,6 +93,7 @@ const productRow = row => ({
   image: row.image.startsWith('studio:') ? `/api/products/${encodeURIComponent(row.id)}/image` : `/assets/${encodeURIComponent(row.image)}`, description: row.description,
   pricePaise: row.price_paise, stock: row.stock, active: Boolean(row.active),
   options: JSON.parse(row.options_json || '[]'),
+  variant: skuMetadata(db,row.id), hasVariants: hasSkus(db,row.id),
 });
 
 for (const item of catalog) {
@@ -230,7 +234,8 @@ async function sendVerification(email, token) {
 }
 
 function allProducts(includePrivateDrafts = true) {
-  return db.prepare(`SELECT * FROM products ${includePrivateDrafts ? '' : "WHERE image NOT LIKE 'studio:%' OR active=1"} ORDER BY category, name`).all().map(productRow);
+  const products = db.prepare(`SELECT * FROM products ${includePrivateDrafts ? '' : "WHERE (image NOT LIKE 'studio:%' AND id NOT IN (SELECT product_id FROM inventory_skus) AND id NOT IN (SELECT parent_id FROM inventory_skus)) OR active=1"} ORDER BY category, name`).all().map(productRow);
+  return includePrivateDrafts ? products : products.map(p=>({...p,variant:p.variant?{sku:p.variant.sku,size:p.variant.size,colour:p.variant.colour}:null}));
 }
 
 function publicOrder(order) {
@@ -260,7 +265,7 @@ async function checkout(req, res) {
     seen.add(productId);
     const product = db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(productId);
     const qty = Number(candidate.quantity);
-    if (!product || !Number.isInteger(qty) || qty < 1 || qty > 10 || product.price_paise == null || product.stock == null) {
+    if (!product || hasSkus(db,productId) || !Number.isInteger(qty) || qty < 1 || qty > 10 || product.price_paise == null || product.stock == null) {
       return json(res, 400, { error: 'A selected item is unavailable or has changed. Refresh your cart.' });
     }
     items.push({ product, qty });
@@ -289,6 +294,7 @@ async function checkout(req, res) {
     for (const x of items) {
       insertLine.run(id, x.product.id, x.product.name, x.qty, x.product.price_paise);
       db.prepare('UPDATE products SET stock=stock-?,updated_at=? WHERE id=?').run(x.qty, now(), x.product.id);
+      if(skuMetadata(db,x.product.id))recordStockMovement(db,{id:`order:${id}:${x.product.id}`,productId:x.product.id,delta:-x.qty,reason:'order_reserved',reference:id});
     }
     db.exec('COMMIT');
     return json(res, 201, { orderId: id, trackingToken: tracking, amountPaise: amount, currency: 'INR', paymentMethod: 'cash_on_delivery' });
@@ -323,7 +329,7 @@ async function handle(req, res) {
       '/api/early-access': [4, 60*60*1000],
     };
     if (req.method === 'POST' && limits[path] && !rateLimit(req, res, path, ...limits[path])) return;
-    if (path.startsWith('/api/admin/designs') && !['GET','HEAD'].includes(req.method)
+    if ((path.startsWith('/api/admin/designs') || path.startsWith('/api/admin/inventory')) && !['GET','HEAD'].includes(req.method)
       && !rateLimit(req,res,'studio-write',120,60*1000)) return;
 
     if (req.method === 'GET' && path === '/api/status') {
@@ -412,7 +418,7 @@ async function handle(req, res) {
       const product = db.prepare('SELECT active FROM products WHERE id=?').get(productImage[1]);
       if (!product) return json(res,404,{error:'Product image not found.'});
       if (HIDE_PUBLIC_PRODUCTS || !product.active) requireAdmin(req);
-      const svg = renderImportedProduct(db,productImage[1]);
+      const svg = renderImportedProduct(db,skuMetadata(db,productImage[1])?.parentProductId || productImage[1]);
       if (!svg) return json(res,404,{error:'Product image not found.'});
       res.setHeader('Content-Type','image/svg+xml; charset=utf-8');
       res.setHeader('Cache-Control','private, no-store');
@@ -510,6 +516,7 @@ async function handle(req, res) {
       return json(res,200,{ok:true,expiresInMinutes:30,mode:'fashion-owner-verified'});
     }
     if (path.startsWith('/api/admin/')) requireAdmin(req);
+    if (path === '/api/admin/inventory' || path.startsWith('/api/admin/inventory/')) return await handleInventory({db,req,res,path,json,jsonBody});
     if (path === '/api/admin/designs' || path.startsWith('/api/admin/designs/')) return await handleStudio({db,req,res,path,json,jsonBody});
     if (path.startsWith('/api/admin/cofounder/')) return await handleCofounder({ db, req, res, path, json, jsonBody });
     if (path.startsWith('/api/admin/finance/')) return await handleFinance({ db, req, res, path, json, jsonBody });
@@ -532,6 +539,9 @@ async function handle(req, res) {
       const stock = p.stock === null || p.stock === '' ? null : Number(p.stock);
       const active=Boolean(p.active);
       if(!db.prepare('SELECT 1 FROM products WHERE id=?').get(id)) return json(res,404,{error:'Product not found.'});
+      if(active && hasSkus(db,id))return json(res,400,{error:'Publish the individual size SKUs; the parent design cannot be sold separately.'});
+      const currentStock=db.prepare('SELECT stock FROM products WHERE id=?').get(id).stock;
+      if(skuMetadata(db,id) && stock!==currentStock)return json(res,409,{error:'Use Inventory to record stock changes with a reason; refresh this product first.'});
       if((price!==null && (!Number.isSafeInteger(price)||price<1)) || (stock!==null && (!Number.isInteger(stock)||stock<0)) || (active && (price===null || stock===null))) return json(res,400,{error:'An active product needs a valid price and stock count.'});
       db.prepare('UPDATE products SET description=?,price_paise=?,stock=?,active=?,options_json=?,updated_at=? WHERE id=?')
         .run(String(p.description||'').slice(0,2500),price,stock,active?1:0,JSON.stringify(Array.isArray(p.options)?p.options.slice(0,30):[]),now(),id);
@@ -554,6 +564,7 @@ async function handle(req, res) {
         if(status==='cancelled') {
           for (const item of db.prepare('SELECT product_id,quantity FROM order_items WHERE order_id=?').all(id)) {
             db.prepare('UPDATE products SET stock=stock+?,updated_at=? WHERE id=?').run(item.quantity,now(),item.product_id);
+            if(skuMetadata(db,item.product_id))recordStockMovement(db,{id:`cancel:${id}:${item.product_id}`,productId:item.product_id,delta:item.quantity,reason:'order_cancelled',reference:id});
           }
         }
         db.exec('COMMIT');
@@ -584,7 +595,7 @@ async function handle(req, res) {
       if (!file.isFile()) return json(res,404,{error:'Not found.'});
       setHeaders(res,mime[extname(full)] || 'application/octet-stream');
       res.setHeader('Cache-Control', ['.html','.js','.css'].includes(extname(full)) ? 'no-cache' : 'public, max-age=86400, stale-while-revalidate=604800');
-      if (['/design-studio.html','/design-studio.js','/design-studio.css','/studio-render.js'].includes(filePath)) {
+      if (['/admin.html','/admin.js','/inventory.js','/design-studio.html','/design-studio.js','/design-studio.css','/studio-render.js'].includes(filePath)) {
         res.setHeader('Cache-Control','private, no-store');
         res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
       }

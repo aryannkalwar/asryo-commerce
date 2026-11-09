@@ -23,7 +23,7 @@ function intercepted(path,mode='navigate',destination='document'){
   handlers.fetch({request,respondWith(p){received=true;pending.push(Promise.resolve(p))}});
   return received;
 }
-for(const path of ['/design-studio','/design-studio.html','/api/admin/designs','/workspace','/studio','/fashion-os','/manufacturing','/admin',
+for(const path of ['/inventory.js','/api/admin/inventory','/design-studio','/design-studio.html','/api/admin/designs','/workspace','/studio','/fashion-os','/manufacturing','/admin',
  '/unsubscribe.html?token=private','/track.html','/api/control?action=state',
  '/api/team?action=status','/api/admin/orders','/api/checkout/orders',
  '/api/creative?action=art&id=secret','/src-internal/control.js'])

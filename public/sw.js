@@ -11,7 +11,7 @@ const PUBLIC_PAGES=new Set([
  '/concept-visuals.html','/red-sun-002.html','/celestial-001.html'
 ]);
 const PRIVATE_PATHS=new Set([
- '/admin','/admin.html','/workspace','/workspace.html',
+ '/inventory.js','/admin','/admin.html','/workspace','/workspace.html',
  '/fashion-os','/dashboard','/dashboard.html',
  '/design-studio','/design-studio.html','/design-studio.js','/design-studio.css','/studio-render.js','/studio','/operations','/operations.html',
  '/manufacturing','/team','/team.html',
