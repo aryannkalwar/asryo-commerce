@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateSampleEconomics } from '../public/sample-planner-core.mjs';
+import { calculateSampleEconomics } from '../public/sample-planner-core.js';
 const scenario = {
   quantity:10, blankUnitPaise:25000, printUnitPaise:6000,
   labelUnitPaise:1500, packagingUnitPaise:1200,
