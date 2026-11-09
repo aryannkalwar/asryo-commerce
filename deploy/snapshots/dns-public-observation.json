@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-11-09T06:26:00Z",
+  "completeZoneBackup": false,
+  "sources": ["Vercel domain configuration API", "Google public DNS-over-HTTPS"],
+  "nameservers": ["becky.ns.cloudflare.com", "bowen.ns.cloudflare.com"],
+  "apexPublicA": ["172.67.210.78", "104.21.45.55"],
+  "wwwCname": "jade-yeot-7deb48.netlify.app.",
+  "mx": [{"priority":0,"target":"smtp.secureserver.net."},{"priority":10,"target":"mailstore1.secureserver.net."}],
+  "spf": "v=spf1 include:secureserver.net -all",
+  "dmarc": "v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;",
+  "vercelRecommendedCname": "be828afcfb698681.vercel-dns-017.com.",
+  "vercelRecommendedA": ["216.198.79.1", "64.29.17.1"],
+  "changed": false,
+  "limitation": "Public answers cannot export Cloudflare proxy flags, original apex target, all subdomains, DKIM selectors or complete mail configuration. Obtain authenticated zone export before cutover."
+}
