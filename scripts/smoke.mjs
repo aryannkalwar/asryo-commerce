@@ -72,6 +72,12 @@ try {
   assert.match(page.headers.get('content-security-policy') || '', /frame-ancestors 'none'/, 'security headers are set');
   assert.doesNotMatch(page.headers.get('content-security-policy') || '', /razorpay/i, 'payment provider is absent from the browser policy');
   assert.match(await page.text(), /ASRYO/);
+  const samplePage = await fetch(base + '/sample-planner.html');
+  assert.equal(samplePage.status, 200, 'sample planning tool is served');
+  assert.match(await samplePage.text(), /Sample-first sourcing/i);
+  const sampleModule = await fetch(base + '/sample-planner-core.js');
+  assert.equal(sampleModule.status, 200, 'browser calculation module is served');
+  assert.match(sampleModule.headers.get('content-type') || '', /javascript/, 'browser module uses JavaScript MIME');
   for (const path of ['/', '/healthz', '/api/status', '/editorial.css']) {
     const head = await fetch(base + path, {method:'HEAD'});
     assert.equal(head.status,200,`HEAD ${path} matches GET`);
