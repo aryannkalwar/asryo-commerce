@@ -95,6 +95,11 @@ try {
   assert.equal((await fetch(base+'/cofounder.html')).status,200,'private Cofounder shell loads');
   assert.equal((await fetch(base+'/costing')).status,200,'product-costing route loads');
   assert.equal((await fetch(base+'/finance.js')).status,200,'finance calculator assets load');
+  const privateDesigns=await fetch(base+'/api/admin/designs');
+  assert.equal(privateDesigns.status,401,'saved designs require admin session');
+  const studioShell=await fetch(base+'/design-studio');
+  assert.equal(studioShell.status,200,'design studio shell loads');
+  assert.match(studioShell.headers.get('cache-control'),/private, no-store/,'studio shell is never cached');
   const privateFinance=await fetch(base+'/api/admin/finance/products');
   assert.equal(privateFinance.status,401,'anonymous visitors cannot read product cost profiles');
 
@@ -237,6 +242,31 @@ try {
   assert.equal(login.status, 200, 'admin can sign in to manage COD orders');
   const cookie = login.headers.get('set-cookie')?.split(';')[0];
   assert(cookie, 'admin session cookie is issued');
+  const studioHeaders={Origin:base,Cookie:cookie,'Content-Type':'application/json'};
+  const studioLayer=()=>({text:'ASRYO TEST',ink:'#d4c4a8',artwork:'',x:300,y:290,width:160,rotation:0});
+  const studioInput={name:'Smoke design',design:{garment:'hoodie',color:'#222222',fabric:'',gsm:null,printMethod:'',notes:'Test sample only',measurements:{chest:null,length:null,printWidth:null},sides:{front:studioLayer(),back:studioLayer()}}};
+  const studioCrossOrigin=await fetch(base+'/api/admin/designs',{method:'POST',headers:{...studioHeaders,Origin:'https://attacker.example'},body:JSON.stringify(studioInput)});
+  assert.equal(studioCrossOrigin.status,403,'studio writes reject cross-site requests');
+  const newStudio=await fetch(base+'/api/admin/designs',{method:'POST',headers:studioHeaders,body:JSON.stringify(studioInput)});
+  assert.equal(newStudio.status,201,'authenticated owner creates a design');
+  let studioProject=(await newStudio.json()).project;
+  const studioId=studioProject.id;
+  for(const action of ['review','approve']){
+    const response=await fetch(base+'/api/admin/designs/'+studioId+'/'+action,{method:'POST',headers:studioHeaders,body:JSON.stringify({revision:studioProject.revision})});
+    assert.equal(response.status,200,'studio '+action+' succeeds');studioProject=(await response.json()).project;
+  }
+  const importStudio=()=>fetch(base+'/api/admin/designs/'+studioId+'/draft-sku',{method:'POST',headers:studioHeaders,body:JSON.stringify({revision:studioProject.revision})});
+  const firstImport=await (await importStudio()).json();assert.equal(firstImport.created,true);
+  const retryImport=await (await importStudio()).json();assert.equal(retryImport.created,false);assert.equal(firstImport.productId,retryImport.productId);
+  const importedRow=openDb.prepare('SELECT active,price_paise,stock FROM products WHERE id=?').get(firstImport.productId);
+  assert.equal(importedRow.active,0);assert.equal(importedRow.price_paise,null);assert.equal(importedRow.stock,null);
+  const publicAfterImport=await (await fetch(base+'/api/products')).json();
+  assert(!publicAfterImport.products.some(p=>p.id===firstImport.productId),'unpublished Studio drafts never appear in the public catalogue');
+  const designImage=base+'/api/products/'+firstImport.productId+'/image';
+  assert.equal((await fetch(designImage)).status,401,'unpublished artwork is private');
+  const privateImage=await fetch(designImage,{headers:{Cookie:cookie}});assert.equal(privateImage.status,200);assert.match(await privateImage.text(),/ASRYO TEST/);
+  const pack=await fetch(base+'/api/admin/designs/'+studioId+'/techpack',{headers:{Cookie:cookie}});assert.equal(pack.status,200);assert.equal((await pack.json()).project.revision,studioProject.revision);
+  const privateExport=await fetch(base+'/api/admin/designs/'+studioId+'/front.svg');assert.equal(privateExport.status,401,'SVG export requires admin');
   const authenticatedMetrics=await fetch(base+'/api/admin/cofounder/overview',{headers:{Cookie:cookie}});
   assert.equal(authenticatedMetrics.status,200,'authenticated admin can read Cofounder metrics');
   const metricsData=await authenticatedMetrics.json();
@@ -302,6 +332,11 @@ try {
   });
   assert.equal(assistant.status, 200, 'preview shopping assistant works without an AI key');
   assert.equal((await assistant.json()).mode, 'preview');
+  await stopServer();await startServer(true);
+  const restoredStudio=await fetch(base+'/api/admin/designs/'+studioId,{headers:{Cookie:cookie}});
+  assert.equal(restoredStudio.status,200,'saved project persists across process restart');
+  assert.equal((await restoredStudio.json()).project.status,'approved');
+  const restoredImport=await (await importStudio()).json();assert.equal(restoredImport.productId,firstImport.productId,'product linkage persists across restart');
   console.log('ASRYO checks passed: closed-by-default readiness, storefront, catalog, security headers, origin checks, admin protection, disabled online-payment routes, COD ordering without payment credentials, order tracking, stock reservation, oversell rejection, cancellation restock, and assistant preview.');
 } finally {
   await stopServer();

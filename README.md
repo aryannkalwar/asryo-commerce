@@ -59,3 +59,17 @@ The server calculates order totals from its product records; the browser cannot 
 ## Hosting and domain
 
 Use the existing Railway staging project and its attached persistent volume. Verify a COD order and order tracking on the staging hostname before considering production. `asryo.com` and `www.asryo.com` must not be pointed to a deployment until the catalog, business details, policies, and staging flow are ready. Preserve GoDaddy email DNS records when adjusting website records.
+
+## Saved Fashion Studio and commerce handoff
+
+Open `/design-studio` from `/business-os` after commerce admin sign-in or owner-session verification. This is a new integrated editor; the existing Vercel Fashion OS remains at `/studio`.
+
+- Edit front/back T-shirt or hoodie sketches, upload your PNG/JPEG/WebP artwork (1 MB per side), adjust position/scale/rotation and graphic text, and use undo/redo.
+- Save projects into the existing persistent SQLite volume. An optimistic revision check prevents a stale browser tab overwriting a newer save. All saves return the concept to draft.
+- Submit a saved draft for review, approve that saved revision, then create its commerce draft. Repeated requests return the same linked product. New products have no price/stock and remain inactive.
+- Commerce images use an immutable approved snapshot. Later project edits cannot silently alter that snapshot or any existing product stock, price or orders.
+- Export saved front/back SVG design studies, a JSON tech pack, or a printable sample worksheet. These are reference sketches, not CAD patterns or confirmed manufacturing specifications. Targets remain blank until entered by the owner.
+- Project reads, writes, history, exports and unpublished artwork require the commerce session; same-origin checks protect all writes. Private designs are never cached by the service worker.
+- Existing Vercel Fashion OS/Blob designs are not automatically imported. This editor does not claim automatic AI image generation, designer team roles, courier integration or full cross-backend synchronization.
+
+Local development: `npm run dev` loads an optional local `.env` and accepts `--port`. Set `DATA_DIR` to a disposable private directory when testing. Never commit credentials or local databases.
