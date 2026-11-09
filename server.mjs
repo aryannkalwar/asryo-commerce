@@ -4,8 +4,8 @@ import { handleCofounder } from './cofounder.mjs';
 import { handleFinance } from './commerce-finance.mjs';
 import { evaluateCofounderAutomations } from './cofounder-automation.mjs';
 import { verifyFashionOwnerCookie } from './fashion-owner-sso.mjs';
-import { createReadStream, existsSync, mkdirSync } from 'node:fs';
-import { extname, join, normalize, resolve } from 'node:path';
+import { createReadStream, statSync, mkdirSync } from 'node:fs';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, randomUUID, scrypt as scryptCallback, createHash, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
@@ -304,9 +304,18 @@ async function checkout(req, res) {
 
 async function handle(req, res) {
   setHeaders(res, 'text/plain; charset=utf-8');
-  const url = new URL(req.url, originOf(req));
-  const path = decodeURIComponent(url.pathname);
+  let path = '';
   try {
+    let url;
+    try {
+      url = new URL(req.url, originOf(req));
+      path = decodeURIComponent(url.pathname);
+      if (path.includes('\0')) throw new Error('Null byte');
+    } catch {
+      return json(res, 400, { error: 'Invalid request URL.' });
+    }
+    // HEAD follows the same read-only handlers as GET. Node omits the body.
+    if (req.method === 'HEAD') req.method = 'GET';
     if (await proxyFashionOS(req, res, path, originOf(req))) return;
     if (req.method === 'GET' && path === '/healthz') return json(res, 200, { ok:true });
     if (path.startsWith('/api/') && req.method !== 'GET') requireSameOrigin(req);
@@ -522,10 +531,10 @@ async function handle(req, res) {
     }
     if (req.method === 'PATCH' && path.startsWith('/api/admin/orders/')) {
       const id=path.slice('/api/admin/orders/'.length); const {status}=await jsonBody(req,8*1024);
-      const allowed=new Set(['processing','shipped','delivered','cancelled']);
+      const transitions = { processing: ['shipped','delivered','cancelled'], shipped: ['delivered'], delivered: [], cancelled: [] };
       const order=db.prepare('SELECT status,payment_status,payment_method FROM orders WHERE id=?').get(id);
       if(!order) return json(res,404,{error:'Order not found.'});
-      if(!allowed.has(status) || order.status==='cancelled' || (status==='cancelled' && order.status!=='processing')) return json(res,400,{error:'This order status change is not allowed.'});
+      if(!transitions[order.status]?.includes(status)) return json(res,400,{error:'This order status change is not allowed.'});
       db.exec('BEGIN IMMEDIATE');
       try {
         db.prepare('UPDATE orders SET status=?,payment_status=?,updated_at=? WHERE id=?')
@@ -553,11 +562,23 @@ async function handle(req, res) {
       const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path === '/business-os' ? '/business-os.html' : path === '/costing' ? '/finance.html' : path;
       const safe = normalize(filePath).replace(/^([/\\]*\.\.[/\\])+/, '');
       const full = resolve(join(root,'public',safe));
-      if (!full.startsWith(resolve(join(root,'public')))) return json(res,404,{error:'Not found.'});
-      if (!existsSync(full)) return json(res,404,{error:'Not found.'});
+      const publicRoot = resolve(join(root,'public'));
+      if (!full.startsWith(publicRoot + sep)) return json(res,404,{error:'Not found.'});
+      let file;
+      try { file = statSync(full); } catch (error) {
+        if (['ENOENT','ENOTDIR'].includes(error.code)) return json(res,404,{error:'Not found.'});
+        throw error;
+      }
+      if (!file.isFile()) return json(res,404,{error:'Not found.'});
       setHeaders(res,mime[extname(full)] || 'application/octet-stream');
       res.setHeader('Cache-Control', ['.html','.js','.css'].includes(extname(full)) ? 'no-cache' : 'public, max-age=86400, stale-while-revalidate=604800');
-      res.statusCode=200; return createReadStream(full).pipe(res);
+      res.statusCode=200;
+      const stream = createReadStream(full);
+      stream.on('error', () => {
+        if (res.headersSent) res.destroy();
+        else json(res, 500, { error: 'The resource could not be loaded.' });
+      });
+      return stream.pipe(res);
     }
     return json(res,404,{error:'Not found.'});
   } catch (error) {

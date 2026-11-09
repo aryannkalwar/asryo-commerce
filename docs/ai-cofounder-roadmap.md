@@ -64,7 +64,7 @@ Sources checked 2026-11-08:
 - This branch does not modify `STORE_READY`, activate stock or publish the public store.
 
 ## Current deployment and authentication constraints (2026-11-08)
-- GitHub implementation exists in the feature branch; it is not yet merged or deployed.
+- Superseded by the 9 November review: the Cofounder, Finance Studio and owner bridge are merged on main and deployed on Railway at db3af53. See development-review-2026-11-09.md for verified current state.
 - The original ASRYO Fashion OS deployed on Vercel has its own owner session and operations data; the storefront already proxies private workspace paths to Fashion OS.
 - The Cofounder UI can check that the browser's Fashion OS session reaches /api/ops. It **does not** yet synchronize operational data, credentials, or inventory between independent backends.
 - Current Railway environment variable names do **not** show ADMIN_EMAIL, ADMIN_PASSWORD, OPENAI_API_KEY or payment/courier keys. Cofounder API will remain gated by the existing Railway admin session. Configure required credentials via Railway's protected settings, not GitHub or chat.
