@@ -72,6 +72,19 @@ try {
   assert.match(page.headers.get('content-security-policy') || '', /frame-ancestors 'none'/, 'security headers are set');
   assert.doesNotMatch(page.headers.get('content-security-policy') || '', /razorpay/i, 'payment provider is absent from the browser policy');
   assert.match(await page.text(), /ASRYO/);
+  for (const path of ['/', '/healthz', '/api/status', '/editorial.css']) {
+    const head = await fetch(base + path, {method:'HEAD'});
+    assert.equal(head.status,200,`HEAD ${path} matches GET`);
+    assert.equal(await head.text(),'','HEAD responses have no body');
+  }
+  for (const path of ['/%ZZ', '/%00']) {
+    assert.equal((await fetch(base + path)).status,400,'malformed URL rejected');
+    assert.equal((await fetch(base + '/healthz')).status,200,'bad URL does not stop server');
+  }
+  for (const path of ['/assets', '/assets/', '/..%2fserver.mjs', '/..%2fpublic-other/file.txt']) {
+    assert.equal((await fetch(base + path)).status,404,'directory and traversal requests rejected');
+    assert.equal((await fetch(base + '/healthz')).status,200,'static miss does not stop server');
+  }
   const unifiedHub=await fetch(base+'/business-os');
   assert.equal(unifiedHub.status,200,'consolidated business workspace loads');
   const hubMarkup=await unifiedHub.text();
@@ -266,6 +279,21 @@ try {
   });
   assert.equal(doubleCancel.status, 400, 'repeated cancellation cannot restock twice');
   assert.equal(openDb.prepare('SELECT stock FROM products WHERE id=?').get(product.id).stock, 5);
+  const nextOrder = await (await createOrder()).json();
+  const updateStatus = status => fetch(`${base}/api/admin/orders/${nextOrder.orderId}`, {
+    method:'PATCH', headers:{Origin:base,Cookie:cookie,'Content-Type':'application/json'},
+    body:JSON.stringify({status})
+  });
+  assert.equal((await updateStatus('shipped')).status,200,'processing order ships');
+  assert.equal((await updateStatus('processing')).status,400,'shipped order cannot be reset');
+  assert.equal((await updateStatus('cancelled')).status,400,'shipped order cannot restock through cancellation');
+  assert.equal((await updateStatus('delivered')).status,200,'shipped order is delivered');
+  for (const status of ['processing','shipped','cancelled','delivered']) {
+    assert.equal((await updateStatus(status)).status,400,'delivered order is final');
+  }
+  const delivered = openDb.prepare('SELECT status,payment_status FROM orders WHERE id=?').get(nextOrder.orderId);
+  assert.equal(delivered.payment_status,'collected','delivery records cash collection');
+  assert.equal(openDb.prepare('SELECT stock FROM products WHERE id=?').get(product.id).stock,3,'rejected transitions do not restock');
   openDb.close();
   openDb = null;
 
