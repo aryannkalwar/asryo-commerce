@@ -93,15 +93,10 @@ const productRow = row => ({
 });
 
 for (const item of catalog) {
-  const initialStock = item.type === 'Saree' ? 20 : null;
+  // Seed missing archive entries only. Persistent business records are authoritative:
+  // a deploy/restart must never reset reviewed descriptions, prices or stock.
   db.prepare(`INSERT OR IGNORE INTO products(id,name,category,type,image,description,price_paise,updated_at)
     VALUES(?,?,?,?,?,?,?,?)`).run(item.id, item.name, item.category, item.type, item.image, item.description || '', item.pricePaise ?? null, now());
-  // Refresh catalog details and explicitly confirmed prices in persistent databases.
-  // ASRYO confirmed twenty units per saree; preserve any later stock changes and sale status.
-  db.prepare(`UPDATE products SET name=?,category=?,type=?,image=?,description=?,
-    price_paise=COALESCE(?,price_paise),stock=COALESCE(stock,?),updated_at=? WHERE id=?`)
-    .run(item.name, item.category, item.type, item.image, item.description || '',
-      Number.isSafeInteger(item.pricePaise) && item.pricePaise > 0 ? item.pricePaise : null, initialStock, now(), item.id);
 }
 
 const mime = {

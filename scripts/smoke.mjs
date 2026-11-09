@@ -199,9 +199,16 @@ try {
   const db = new DatabaseSync(join(dataDir, 'asryo.sqlite'));
   assert.equal(db.prepare("SELECT payment_method FROM orders WHERE id='legacy-payment-preview'").get().payment_method, 'legacy_online', 'legacy payment records are not mislabeled as COD');
   const product = db.prepare('SELECT id FROM products LIMIT 1').get();
-  db.prepare('UPDATE products SET price_paise=200,stock=5,active=1 WHERE id=?').run(product.id);
+  db.prepare("UPDATE products SET price_paise=200,stock=5,active=1,description='Owner reviewed sample description' WHERE id=?").run(product.id);
   db.close();
   await startServer(true);
+
+  const reopened = new DatabaseSync(join(dataDir, 'asryo.sqlite'), {readOnly:true});
+  const preserved = reopened.prepare('SELECT price_paise,stock,description FROM products WHERE id=?').get(product.id);
+  assert.equal(preserved.price_paise, 200, 'restart preserves owner price');
+  assert.equal(preserved.stock, 5, 'restart preserves real inventory');
+  assert.equal(preserved.description, 'Owner reviewed sample description', 'restart preserves owner copy');
+  reopened.close();
 
   const openStatus = await (await fetch(`${base}/api/status`)).json();
   assert.equal(openStatus.storeReady, true, 'an explicitly opened store with available products is ready without payment credentials');
