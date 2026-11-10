@@ -1,11 +1,18 @@
 # ASRYO Commerce
 
+## Customer ordering update — 10 November 2026
+
+The existing storefront now includes dedicated shop/category/product/cart/checkout/account/order routes, product-release approval profiles, separate ready-stock and pre-order controls, gated Razorpay integration, duplicate-order protection, transactional stock reservations, courier tracking, refunds and a durable email outbox. **Ordering remains safely closed until actual products and operational approvals are configured and verified.**
+
+Use [`docs/COMMERCE_OPERATIONS.md`](docs/COMMERCE_OPERATIONS.md) for authoritative deployment, launch gates, payment verification, backup limitations and rollback instructions. Gateway unit tests simulate provider responses; they are not real merchant transactions.
+
+
 ## Speed Meets Street preview (October 2026)
 
 - Responsive black-and-red homepage with original AI-based ASRYO Speed Division and Dream Future concept images.
 - Standalone concept detail pages: `/speed-division.html` and `/dream-future.html`. Both include front/back imagery, print-detail zoom and an **unconfirmed** size guide. These are not purchasable products.
 - Consent-based, **double-opt-in** email signups: `/api/early-access/status` gates the frontend and `POST /api/early-access` requires an explicit consent checkbox. `GET /api/early-access/verify` confirms email; `POST /api/early-access/unsubscribe` opts out; the authenticated `GET /api/admin/early-access` returns confirmed, currently subscribed contacts. Data is stored in the same persistent SQLite volume.
-- The signup will **not accept addresses** without `RESEND_API_KEY`, `MAIL_FROM` and `APP_ORIGIN`. Configure a verified sender and check confirmation/unsubscribe flows on staging before turning on collection. Never send to pending/unconfirmed addresses.
+- The signup records explicitly consented non-binding interest without an email provider. It does not claim a verified subscription or send marketing. Verification mail requires `RESEND_API_KEY`, `MAIL_FROM` and `APP_ORIGIN`. Configure a verified sender and check confirmation/unsubscribe flows on staging before turning on collection. Never send to pending/unconfirmed addresses.
 - Pre-launch FAQs and policies are clearly labelled provisional. No fake offers, pricing, shipping promises, inventory, ratings, customer testimonials, or payment-provider claims.
 - Page-specific social metadata, canonical URLs and a sitemap pointing to the Railway-verified `asryo.com` staging domain. **When transferring the domain to production, verify DNS/HTTPS and update `APP_ORIGIN` to the origin serving write requests.**
 - GitHub Actions `.github/workflows/verify.yml` runs `npm run check` on updates, including security and launch smoke checks.
@@ -13,7 +20,7 @@
 ### Domain and operations
 
 - Railway production service: `asryo-web-production.up.railway.app`; it serves the `main` branch of `aryannkalwar/asryo-commerce`.
-- Railway staging service: `asryo-storefront-staging-staging.up.railway.app`; **`asryo.com` is attached to this staging service**, and Railway reports a verified domain and valid certificate. It is **not** attached to the production service.
+- Railway staging service: `asryo-storefront-staging-staging.up.railway.app`; The custom domain has been moved to the production service. Railway confirms ownership and a valid certificate for production. The staging service retains its separate hostname and volume.
 - Do not remove/repoint this domain or edit DNS without a coordinated cutover and verification. Preserve unrelated DNS and email/MX records. The staging environment has pre-existing staged settings changes; avoid accepting those blindly.
 - Admin login requires `ADMIN_EMAIL` and a strong `ADMIN_PASSWORD` in the target environment. Those credentials are not in this repository.
 - The store remains explicitly closed until products, contacts, policies, fulfillment and (separately, if used) customer account verification are ready. Leaving `STORE_READY` unset/false and hiding products is intentional.
@@ -24,8 +31,8 @@ ASRYO storefront for Node.js 22.16 or later. It uses built-in Node modules and S
 
 - The storefront contains historical/inactive catalog records as well as ASRYO T-shirt design-preview products. The public streetwear homepage shows only the ASRYO concept collection; do not interpret old catalog records as confirmed stock.
 - Preview products start inactive and have no price or stock. Ordering remains closed until the operator adds confirmed catalog data and enables `STORE_READY`.
-- Checkout is cash on delivery only. The app has no online payment provider, browser payment widget, or payment webhook.
-- A COD order is recorded as processing with cash due on delivery. Stock is reserved immediately and restored if an unshipped order is cancelled in the admin dashboard.
+- Checkout supports explicitly approved, serviceable COD and gated Razorpay. The provider remains disabled until approved credentials and verification are present.
+- A new COD order is recorded as confirmed with cash due on delivery. Stock is reserved immediately and restored if an unshipped order is cancelled in the admin dashboard.
 - Includes customer accounts, order tracking, a shopping assistant, and an authenticated admin dashboard at `/admin`.
 - Railway production and staging services are deployed with persistent volumes. Storefront app health checks and CI do not constitute a full commerce-readiness review.
 - The Shree Vasstram website is an external catalog reference. Its full catalog, images, descriptions, variants, or stock should not be copied and resold without supplier authorization and a current product export. This repository does not contain its product feed.
@@ -49,12 +56,12 @@ Set these in the hosting provider's environment settings; do not commit secrets 
 - `RESEND_API_KEY` and `MAIL_FROM`: required for verified customer accounts.
 - `PUBLIC_BUSINESS_NAME`, `PUBLIC_SUPPORT_EMAIL`, `PUBLIC_SUPPORT_PHONE`, `PUBLIC_RETURN_ADDRESS`, shipping fee, dispatch times and return/cancellation terms must be confirmed ASRYO information.
 - Set actual product prices, stock, variants and descriptions in admin before activating products.
-- `STORE_READY=true` opens COD ordering only when at least one active, priced, stocked product exists. Keep it false until the catalog, policies, contact information and delivery process are verified.
+- `STORE_READY=true` alone cannot open ordering. Product release approvals, reviewed operational settings, approved payment/serviceability and confirmation email are also required. See the operations guide.
 - `OPENAI_API_KEY` is optional. Without it, the assistant stays in preview mode. If enabled, only the visitor's assistant question and active catalog facts are sent to OpenAI.
 
 ## COD behavior
 
-The server calculates order totals from its product records; the browser cannot set prices. It validates stock inside a SQLite write transaction, creates an order with cash due on delivery, and reserves stock immediately. Cancelling an unshipped order through admin restores its stock once. Marking an order delivered records cash as collected. Legacy payment-preview database fields are retained only for database compatibility; payment endpoints and client integrations are removed.
+The server calculates order totals from its product records; the browser cannot set prices. It validates stock inside a SQLite write transaction, creates an order with cash due on delivery, and reserves stock immediately. Cancelling an unshipped order through admin restores its stock once. Marking an order delivered records cash as collected. Legacy payment-preview database fields are retained for compatibility. The new Razorpay endpoints remain gated and cannot label an order paid without verified capture.
 
 ## Hosting and domain
 

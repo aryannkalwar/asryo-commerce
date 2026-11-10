@@ -6,13 +6,17 @@ import { handleFinance } from './commerce-finance.mjs';
 import { handleStudio, renderImportedProduct } from './fashion-studio.mjs';
 import { evaluateCofounderAutomations } from './cofounder-automation.mjs';
 import { verifyFashionOwnerCookie } from './fashion-owner-sso.mjs';
-import { createReadStream, statSync, mkdirSync } from 'node:fs';
+import { createReadStream, statSync, mkdirSync, readFileSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, randomUUID, scrypt as scryptCallback, createHash, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { DatabaseSync } from 'node:sqlite';
 import catalog from './data/catalog.json' with { type: 'json' };
+import { initCommerce, storeReadiness, publicCatalogue, listingFor, saveListing, quote, createCheckout,
+  gatewayReadiness, verifyCheckoutPayment, processWebhook, updateOrder, orderDetail, refundOrder,
+  deliverNotifications, reconcilePayment, expirePendingOrders } from './commerce.mjs';
+import {startBackups,backupState} from './backups.mjs';
 
 const scrypt = promisify(scryptCallback);
 const root = fileURLToPath(new URL('.', import.meta.url));
@@ -84,6 +88,7 @@ if (!db.prepare('PRAGMA table_info(orders)').all().some(column => column.name ==
 }
 
 initInventory(db);
+initCommerce(db);
 
 const now = () => new Date().toISOString();
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -116,7 +121,8 @@ function setHeaders(res, contentType = 'application/json; charset=utf-8') {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: https://images.unsplash.com https://asryo-design-preview.vercel.app https://asryo-vercel-storefront.vercel.app; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.openai.com https://api.resend.com; upgrade-insecure-requests");
+  const payments = gatewayReadiness().enabled;
+  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: https://images.unsplash.com https://asryo-design-preview.vercel.app https://asryo-vercel-storefront.vercel.app; style-src 'self' 'unsafe-inline'; script-src 'self'"+(payments?' https://checkout.razorpay.com':'')+"; connect-src 'self' https://api.openai.com https://api.resend.com"+(payments?' https://api.razorpay.com':'')+"; frame-src 'self'"+(payments?' https://api.razorpay.com https://checkout.razorpay.com':'')+"; upgrade-insecure-requests");
   if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 }
 
@@ -140,7 +146,7 @@ async function body(req, limit = 64 * 1024) {
 
 async function jsonBody(req, limit) {
   const raw = await body(req, limit);
-  try { return JSON.parse(raw.toString('utf8')); }
+  try { const parsed=JSON.parse(raw.toString('utf8')); if(!parsed || typeof parsed!=='object' || Array.isArray(parsed))throw new Error('Object required'); return parsed; }
   catch { throw Object.assign(new Error('Invalid JSON'), { status: 400 }); }
 }
 
@@ -245,64 +251,16 @@ function publicOrder(order) {
     createdAt: order.created_at, updatedAt: order.updated_at };
 }
 
-async function checkout(req, res) {
-  if (HIDE_PUBLIC_PRODUCTS) return json(res, 503, { error: 'The ASRYO collection is currently unavailable.' });
-  const input = await jsonBody(req);
-  const available = db.prepare('SELECT COUNT(*) AS n FROM products WHERE active=1 AND price_paise>0 AND stock>0').get().n;
-  if (String(process.env.STORE_READY).toLowerCase() !== 'true' || available < 1) return json(res, 503, { error: 'Cash-on-delivery ordering is not open yet.' });
-  const email = String(input.email || '').trim().toLowerCase();
-  const phone = String(input.phone || '').trim();
-  const address = input.address || {};
-  if (!/^\S+@\S+\.\S+$/.test(email) || phone.length < 7 || !address.name || !address.line1 || !address.city || !address.region || !address.postalCode || !address.country) {
-    return json(res, 400, { error: 'Enter a valid email, phone number and complete shipping address.' });
-  }
-  if (!Array.isArray(input.items) || input.items.length < 1 || input.items.length > 20) return json(res, 400, { error: 'Your cart is empty or too large.' });
-  const items = [];
-  const seen = new Set();
-  for (const candidate of input.items) {
-    const productId = String(candidate.id || '');
-    if (seen.has(productId)) return json(res, 400, { error: 'Your cart contains a duplicate item. Refresh your cart.' });
-    seen.add(productId);
-    const product = db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(productId);
-    const qty = Number(candidate.quantity);
-    if (!product || hasSkus(db,productId) || !Number.isInteger(qty) || qty < 1 || qty > 10 || product.price_paise == null || product.stock == null) {
-      return json(res, 400, { error: 'A selected item is unavailable or has changed. Refresh your cart.' });
-    }
-    items.push({ product, qty });
-  }
-  const subtotal = items.reduce((sum, x) => sum + x.product.price_paise * x.qty, 0);
-  const shipping = Math.max(0, Number(process.env.SHIPPING_FEE_PAISE || 0));
-  const amount = subtotal + shipping;
-  if (!Number.isSafeInteger(amount) || amount < 100) return json(res, 400, { error: 'Order total is invalid.' });
-  const id = randomUUID();
-  const tracking = randomBytes(32).toString('base64url');
-  const customer = customerFrom(req);
-  const at = now();
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    for (const { product, qty } of items) {
-      const current = db.prepare('SELECT stock,active,price_paise FROM products WHERE id=?').get(product.id);
-      if (!current?.active || current.price_paise !== product.price_paise || current.stock < qty) {
-        db.exec('ROLLBACK');
-        return json(res, 400, { error: 'A selected item has just sold out or changed. Refresh your cart.' });
-      }
-    }
-    db.prepare(`INSERT INTO orders(id,customer_id,public_token_hash,status,payment_status,payment_method,total_paise,shipping_paise,shipping_json,created_at,updated_at)
-      VALUES(?,?,?,'processing','due_on_delivery','cash_on_delivery',?, ?, ?, ?, ?)`)
-      .run(id, customer?.id || null, hash(tracking), amount, shipping, JSON.stringify({ ...address, email, phone }), at, at);
-    const insertLine = db.prepare('INSERT INTO order_items(order_id,product_id,product_name,quantity,unit_price_paise) VALUES(?,?,?,?,?)');
-    for (const x of items) {
-      insertLine.run(id, x.product.id, x.product.name, x.qty, x.product.price_paise);
-      db.prepare('UPDATE products SET stock=stock-?,updated_at=? WHERE id=?').run(x.qty, now(), x.product.id);
-      if(skuMetadata(db,x.product.id))recordStockMovement(db,{id:`order:${id}:${x.product.id}`,productId:x.product.id,delta:-x.qty,reason:'order_reserved',reference:id});
-    }
-    db.exec('COMMIT');
-    return json(res, 201, { orderId: id, trackingToken: tracking, amountPaise: amount, currency: 'INR', paymentMethod: 'cash_on_delivery' });
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
-  }
+function authorizedOrder(req, url, input = {}) {
+  const id = String(input.orderId || url.searchParams.get('id') || '');
+  const order = db.prepare('SELECT * FROM orders WHERE id=?').get(id);
+  const user = customerFrom(req);
+  const token = String(input.trackingToken || url.searchParams.get('token') || '');
+  if (!order || !(user && order.customer_id === user.id) && !(token.length >= 32 && hash(token) === order.public_token_hash))
+    throw Object.assign(new Error('Order not found.'), {status:404});
+  return order;
 }
+
 
 async function handle(req, res) {
   setHeaders(res, 'text/plain; charset=utf-8');
@@ -320,12 +278,19 @@ async function handle(req, res) {
     if (req.method === 'HEAD') req.method = 'GET';
     if (await proxyFashionOS(req, res, path, originOf(req))) return;
     if (req.method === 'GET' && path === '/healthz') return json(res, 200, { ok:true });
+    // The provider webhook authenticates the exact raw body with its HMAC, not a browser Origin header.
+    if (req.method === 'POST' && path === '/api/payments/webhook') {
+      const result = processWebhook(db, await body(req,256*1024), req.headers['x-razorpay-signature'], req.headers['x-razorpay-event-id']);
+      return json(res,200,result);
+    }
     if (path.startsWith('/api/') && req.method !== 'GET') requireSameOrigin(req);
     const limits = {
       '/api/auth/login': [8, 15*60*1000], '/api/auth/register': [5, 60*60*1000],
       '/api/admin/login': [8, 15*60*1000],
       '/api/admin/fashion-login': [8, 15*60*1000], '/api/assistant': [30, 60*1000],
       '/api/checkout/orders': [10, 15*60*1000],
+      '/api/checkout/quote': [60, 15*60*1000], '/api/payments/verify': [30,15*60*1000],
+      '/api/storefront/orders/action': [15,15*60*1000],
       '/api/early-access': [4, 60*60*1000],
     };
     if (req.method === 'POST' && limits[path] && !rateLimit(req, res, path, ...limits[path])) return;
@@ -333,9 +298,31 @@ async function handle(req, res) {
       && !rateLimit(req,res,'studio-write',120,60*1000)) return;
 
     if (req.method === 'GET' && path === '/api/status') {
-      const available = db.prepare('SELECT COUNT(*) AS n FROM products WHERE active=1 AND price_paise>0 AND stock>0').get().n;
-      const ready = !HIDE_PUBLIC_PRODUCTS && String(process.env.STORE_READY).toLowerCase() === 'true' && available > 0;
+      const available = publicCatalogue(db).filter(p=>p.purchasable).length;
+      const ready = storeReadiness(db).ready && available>0;
       return json(res, 200, { storeReady: ready, availableProducts: HIDE_PUBLIC_PRODUCTS ? 0 : available, paymentMethod: 'cash_on_delivery', assistant: Boolean(process.env.OPENAI_API_KEY), accountVerification: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM), supportEmail: process.env.PUBLIC_SUPPORT_EMAIL || null, supportPhone: process.env.PUBLIC_SUPPORT_PHONE || null, businessName: process.env.PUBLIC_BUSINESS_NAME || 'ASRYO' });
+    }
+    if (req.method === 'GET' && path === '/api/storefront') {
+      const readiness = storeReadiness(db);
+      return json(res,200,{ready:readiness.ready,methods:readiness.methods,paymentMode:readiness.paymentMode,
+        products:publicCatalogue(db),businessName:process.env.PUBLIC_BUSINESS_NAME || 'ASRYO',
+        supportEmail:process.env.PUBLIC_SUPPORT_EMAIL || null,supportPhone:process.env.PUBLIC_SUPPORT_PHONE || null,
+        returnAddress:process.env.PUBLIC_RETURN_ADDRESS || null,accountVerification:Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM),
+        shippingFeePaise:/^\d+$/.test(process.env.SHIPPING_FEE_PAISE || '')?Number(process.env.SHIPPING_FEE_PAISE):null,
+        policiesApproved:String(process.env.POLICIES_APPROVED).toLowerCase()==='true'});
+    }
+    if (req.method === 'POST' && path === '/api/checkout/quote') return json(res,200,quote(db,await jsonBody(req)));
+    if (req.method === 'POST' && path === '/api/checkout/orders') {
+      const result = await createCheckout(db,await jsonBody(req),req.headers['idempotency-key'],customerFrom(req));
+      return json(res,result.pendingReconciliation?202:result.replayed?200:201,result);
+    }
+    if (req.method === 'POST' && path === '/api/payments/verify') return json(res,200,await verifyCheckoutPayment(db,await jsonBody(req)));
+    if (req.method === 'GET' && path === '/api/storefront/orders') return json(res,200,{order:orderDetail(db,authorizedOrder(req,url))});
+    if (req.method === 'POST' && path === '/api/storefront/orders/action') {
+      const input=await jsonBody(req,8192), order=authorizedOrder(req,url,input);
+      const result=updateOrder(db,order.id,input,'customer');
+      if(!result)return json(res,409,{error:'Please contact ASRYO support about this historical order.'});
+      return json(res,200,result);
     }
     if (req.method === 'GET' && path === '/api/early-access/status') {
       const emailReady=Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM && process.env.APP_ORIGIN);
@@ -411,7 +398,7 @@ async function handle(req, res) {
       return json(res,200,{message:'You have been unsubscribed from ASRYO launch updates.'});
     }
 
-    if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: HIDE_PUBLIC_PRODUCTS ? [] : allProducts(false) });
+    if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: publicCatalogue(db).map(p=>({...p,category:'clothing',image:p.profile.images[0],active:true,options:[]})) });
 
     const productImage = path.match(/^\/api\/products\/([a-zA-Z0-9-]{1,100})\/image$/);
     if (req.method === 'GET' && productImage) {
@@ -430,12 +417,12 @@ async function handle(req, res) {
       const { question = '' } = await jsonBody(req, 12 * 1024);
       const q = String(question).trim().slice(0, 700);
       if (!q) return json(res, 400, { error: 'Ask a question about the collection.' });
-      const products = HIDE_PUBLIC_PRODUCTS ? [] : allProducts().filter(p => p.active).map(p => ({ name:p.name, category:p.category, type:p.type, description:p.description }));
+      const products = publicCatalogue(db).map(p => ({ name:p.name, category:'clothing', type:p.type, description:p.description }));
       if (!process.env.OPENAI_API_KEY) {
         const ql = q.toLowerCase();
         const groups = ['clothing','jewellery','art','home-lifestyle'];
         const selected = groups.find(g => ql.includes(g.replace('-', ' ')) || ql.includes(g.split('-')[0])) || 'clothing';
-        const recs = HIDE_PUBLIC_PRODUCTS ? [] : allProducts().filter(p => p.category === selected).slice(0, 3).map(p => p.name);
+        const recs = selected==='clothing'?publicCatalogue(db).slice(0,3).map(p=>p.name):[];
         return json(res, 200, { mode:'preview', answer: recs.length ? `I can help you explore ${selected.replace('-', ' ')}. These pieces are currently listed as launch previews; prices and availability are still being confirmed.` : 'The ASRYO collection is in preview. Tell me whether you are browsing clothing, jewellery, art or home, and I can point you to the right edit.', suggestions: recs });
       }
       const response = await fetch('https://api.openai.com/v1/responses', {
@@ -492,7 +479,7 @@ async function handle(req, res) {
     if (req.method === 'GET' && path === '/api/account/orders') {
       const user = customerFrom(req); if(!user) return json(res,401,{error:'Sign in required.'});
       const orders = db.prepare('SELECT id,status,payment_status,payment_method,total_paise,shipping_paise,currency,created_at,updated_at FROM orders WHERE customer_id=? ORDER BY created_at DESC LIMIT 100').all(user.id);
-      return json(res,200,{orders:orders.map(publicOrder)});
+      return json(res,200,{orders:orders.map(o=>orderDetail(db,o))});
     }
 
     if (req.method === 'POST' && path === '/api/admin/login') {
@@ -516,6 +503,19 @@ async function handle(req, res) {
       return json(res,200,{ok:true,expiresInMinutes:30,mode:'fashion-owner-verified'});
     }
     if (path.startsWith('/api/admin/')) requireAdmin(req);
+    if (req.method === 'GET' && path === '/api/admin/commerce') {
+      return json(res,200,{readiness:storeReadiness(db),backups:backupState,products:allProducts().map(p=>({...p,profile:listingFor(db,p.id)})),
+        notifications:db.prepare('SELECT state,COUNT(*) AS count FROM commerce_notifications GROUP BY state').all(),
+        metrics:db.prepare("SELECT COUNT(*) AS orders,COALESCE(SUM(CASE WHEN payment_status IN ('paid','collected') THEN total_paise ELSE 0 END),0) AS receivedPaise FROM orders WHERE status<>'legacy_preview'").get(),
+        customers:db.prepare('SELECT id,email,verified_at AS verifiedAt,created_at AS createdAt FROM customers ORDER BY created_at DESC LIMIT 200').all()});
+    }
+    if(req.method==='PUT' && path.startsWith('/api/admin/commerce/listings/')) return json(res,200,saveListing(db,path.slice('/api/admin/commerce/listings/'.length),await jsonBody(req,32*1024)));
+    if(req.method==='GET' && path==='/api/admin/commerce/orders') return json(res,200,{orders:db.prepare('SELECT * FROM orders ORDER BY created_at DESC LIMIT 200').all().map(o=>orderDetail(db,o))});
+    if(req.method==='POST' && path==='/api/admin/commerce/notifications/retry') return json(res,200,await deliverNotifications(db));
+    const refundRoute=path.match(/^\/api\/admin\/commerce\/orders\/([a-f0-9-]{36})\/refund$/);
+    if(req.method==='POST' && refundRoute){const input=await jsonBody(req,8192);return json(res,200,await refundOrder(db,refundRoute[1],input.reason));}
+    const reconcileRoute=path.match(/^\/api\/admin\/commerce\/orders\/([a-f0-9-]{36})\/reconcile$/);
+    if(req.method==='POST' && reconcileRoute){const input=await jsonBody(req,8192);return json(res,200,await reconcilePayment(db,reconcileRoute[1],input.gatewayOrderId));}
     if (path === '/api/admin/inventory' || path.startsWith('/api/admin/inventory/')) return await handleInventory({db,req,res,path,json,jsonBody});
     if (path === '/api/admin/designs' || path.startsWith('/api/admin/designs/')) return await handleStudio({db,req,res,path,json,jsonBody});
     if (path.startsWith('/api/admin/cofounder/')) return await handleCofounder({ db, req, res, path, json, jsonBody });
@@ -542,7 +542,8 @@ async function handle(req, res) {
       if(active && hasSkus(db,id))return json(res,400,{error:'Publish the individual size SKUs; the parent design cannot be sold separately.'});
       const currentStock=db.prepare('SELECT stock FROM products WHERE id=?').get(id).stock;
       if(skuMetadata(db,id) && stock!==currentStock)return json(res,409,{error:'Use Inventory to record stock changes with a reason; refresh this product first.'});
-      if((price!==null && (!Number.isSafeInteger(price)||price<1)) || (stock!==null && (!Number.isInteger(stock)||stock<0)) || (active && (price===null || stock===null))) return json(res,400,{error:'An active product needs a valid price and stock count.'});
+      const preorder=listingFor(db,id)?.mode==='preorder';
+      if((price!==null && (!Number.isSafeInteger(price)||price<1)) || (stock!==null && (!Number.isInteger(stock)||stock<0)) || (active && (price===null || (!preorder && stock===null)))) return json(res,400,{error:'An active product needs a valid price and confirmed ready stock, or an approved pre-order release.'});
       db.prepare('UPDATE products SET description=?,price_paise=?,stock=?,active=?,options_json=?,updated_at=? WHERE id=?')
         .run(String(p.description||'').slice(0,2500),price,stock,active?1:0,JSON.stringify(Array.isArray(p.options)?p.options.slice(0,30):[]),now(),id);
       return json(res,200,{product:productRow(db.prepare('SELECT * FROM products WHERE id=?').get(id))});
@@ -552,7 +553,9 @@ async function handle(req, res) {
       return json(res,200,{orders:orders.map(o=>({...publicOrder(o),email:JSON.parse(o.shipping_json).email,phone:JSON.parse(o.shipping_json).phone,address:JSON.parse(o.shipping_json),items:db.prepare('SELECT product_name AS name,quantity,unit_price_paise AS unitPricePaise FROM order_items WHERE order_id=?').all(o.id)}))});
     }
     if (req.method === 'PATCH' && path.startsWith('/api/admin/orders/')) {
-      const id=path.slice('/api/admin/orders/'.length); const {status}=await jsonBody(req,8*1024);
+      const id=path.slice('/api/admin/orders/'.length); const input=await jsonBody(req,8*1024); const {status}=input;
+      const managed=updateOrder(db,id,input);
+      if(managed)return json(res,200,managed);
       const transitions = { processing: ['shipped','delivered','cancelled'], shipped: ['delivered'], delivered: [], cancelled: [] };
       const order=db.prepare('SELECT status,payment_status,payment_method FROM orders WHERE id=?').get(id);
       if(!order) return json(res,404,{error:'Order not found.'});
@@ -572,17 +575,17 @@ async function handle(req, res) {
       return json(res,200,{ok:true});
     }
 
-    if (req.method === 'POST' && path === '/api/checkout/orders') return await checkout(req,res);
     if (req.method === 'GET' && path === '/api/orders/track') {
       const id=url.searchParams.get('id')||''; const token=url.searchParams.get('token')||'';
       const order=db.prepare('SELECT * FROM orders WHERE id=? AND public_token_hash=?').get(id,hash(token));
       if(!order) return json(res,404,{error:'Order not found. Check the tracking link.'});
       const items=db.prepare('SELECT product_name AS name,quantity FROM order_items WHERE order_id=?').all(id);
-      return json(res,200,{order:publicOrder(order),items});
+      return json(res,200,{order:orderDetail(db,order),items});
     }
 
     if (req.method === 'GET') {
-      const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path === '/business-os' ? '/business-os.html' : path === '/costing' ? '/finance.html' : path === '/design-studio' ? '/design-studio.html' : path;
+      const storePages=['/shop','/oversized-t-shirts','/hoodies','/tracksuits','/new-arrivals','/collections','/product','/size-guide','/cart','/checkout','/account','/my-orders','/wishlist','/contact','/shipping-policy','/returns','/privacy','/terms'];
+      const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path === '/business-os' ? '/business-os.html' : path === '/costing' ? '/finance.html' : path === '/design-studio' ? '/design-studio.html' : path === '/commerce-admin' ? '/commerce-admin.html' : storePages.includes(path) ? '/store.html' : path;
       const safe = normalize(filePath).replace(/^([/\\]*\.\.[/\\])+/, '');
       const full = resolve(join(root,'public',safe));
       const publicRoot = resolve(join(root,'public'));
@@ -595,9 +598,25 @@ async function handle(req, res) {
       if (!file.isFile()) return json(res,404,{error:'Not found.'});
       setHeaders(res,mime[extname(full)] || 'application/octet-stream');
       res.setHeader('Cache-Control', ['.html','.js','.css'].includes(extname(full)) ? 'no-cache' : 'public, max-age=86400, stale-while-revalidate=604800');
-      if (['/admin.html','/admin.js','/inventory.js','/design-studio.html','/design-studio.js','/design-studio.css','/studio-render.js'].includes(filePath)) {
+      if (['/admin.html','/admin.js','/inventory.js','/design-studio.html','/design-studio.js','/design-studio.css','/studio-render.js','/commerce-admin.html','/commerce-admin.js'].includes(filePath) || ['/account','/my-orders','/cart','/checkout','/wishlist'].includes(path)) {
         res.setHeader('Cache-Control','private, no-store');
         res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
+      }
+      if(filePath==='/store.html'){
+        const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const titles={'/shop':'The collection','/oversized-t-shirts':'Oversized T-shirts','/hoodies':'Hoodies','/tracksuits':'Tracksuits','/new-arrivals':'New arrivals','/collections':'Collections','/size-guide':'Size guide','/cart':'Shopping bag','/checkout':'Checkout','/account':'Your account','/my-orders':'Order history','/wishlist':'Wishlist','/contact':'Contact ASRYO','/shipping-policy':'Shipping & delivery','/returns':'Returns & refunds','/privacy':'Privacy','/terms':'Terms & conditions'};
+        const product=path==='/product'?publicCatalogue(db).find(p=>p.id===url.searchParams.get('id')):null;
+        const pageTitle=product?.name || titles[path] || 'Product unavailable';
+        const canonical='https://asryo.com'+path+(product?'?id='+encodeURIComponent(product.id):'');
+        const privatePage=['/cart','/checkout','/account','/my-orders','/wishlist'].includes(path)||(path==='/product'&&!product);
+        let html=readFileSync(full,'utf8').replace('<title>ASRYO | The collection</title>',`<title>ASRYO | ${escape(pageTitle)}</title>`).replace('href="https://asryo.com/shop"',`href="${escape(canonical)}"`);
+        html=html.replace('</head>',`<meta property="og:title" content="ASRYO | ${escape(pageTitle)}"><meta property="og:url" content="${escape(canonical)}"><meta property="og:type" content="${product?'product':'website'}">${privatePage?'<meta name="robots" content="noindex,nofollow">':''}</head>`);
+        if(product){
+          const schema={'@context':'https://schema.org','@type':'Product',name:product.name,description:product.description,image:product.profile.images.map(x=>'https://asryo.com'+x),brand:{'@type':'Brand',name:'ASRYO'},sku:product.variant?.sku||product.id};
+          if(product.purchasable)schema.offers={'@type':'Offer',priceCurrency:'INR',price:(product.pricePaise/100).toFixed(2),url:canonical,availability:product.profile.mode==='preorder'?'https://schema.org/PreOrder':'https://schema.org/InStock'};
+          html=html.replace('</head>','<script type="application/ld+json">'+JSON.stringify(schema).replaceAll('<','\\u003c')+'</script></head>');
+        }
+        res.statusCode=200;return res.end(html);
       }
       res.statusCode=200;
       const stream = createReadStream(full);
@@ -627,4 +646,10 @@ if (process.env.NODE_ENV !== 'test' && process.env.COFOUNDER_AUTO_REVIEW !== 'fa
 }
 const server=createServer(handle);
 server.listen(port,'0.0.0.0',()=>console.log(`ASRYO server listening on ${port}`));
+if(process.env.NODE_ENV!=='test') {
+  startBackups(dataDir);
+  let notifying=false;
+  const notify=async()=>{if(notifying)return;notifying=true;try{expirePendingOrders(db);await deliverNotifications(db);}catch{console.error('order_notification_retry_failed');}finally{notifying=false;}};
+  setInterval(notify,60*1000).unref();
+}
 

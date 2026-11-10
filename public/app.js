@@ -79,7 +79,7 @@ if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWo
 window.addEventListener('offline',()=>{state.offlinePreview=true;$('#announceStatus').textContent='Offline preview · reconnect to confirm current details';$('#checkoutUnavailable').hidden=false;$('#checkoutForm').hidden=true;renderCart()});
 window.addEventListener('online',()=>load());
 $('#search').addEventListener('input',renderProducts);$('#categoryFilter').addEventListener('change',renderProducts);
-$('#checkoutOpen').addEventListener('click',()=>setDialog($('#checkoutDialog')));
+$('#checkoutOpen').addEventListener('click',()=>{location.href='/checkout';});
 $('#assistantOpen').addEventListener('click',()=>openDrawer('assistantDrawer'));
 
 $('#checkoutForm').addEventListener('submit',async event=>{

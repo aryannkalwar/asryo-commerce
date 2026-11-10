@@ -7,6 +7,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import sourceCatalog from '../data/catalog.json' with { type: 'json' };
+import {saveListing} from '../commerce.mjs';
+const approvedFixture={mode:'ready_stock',cancellationTerms:'Synthetic cancellation terms',refundTerms:'Synthetic refund terms',approved:true,specificationsVerified:true,imagesVerified:true,stockVerified:true,taxConfirmed:true,fabric:'Synthetic test garment',gsm:240,fit:'Synthetic fixture',sizeGuide:'Synthetic measurements',images:['/assets/asryo-speed-division-front.webp','/assets/asryo-speed-division-back.webp'],gstBps:0,deliveryMinDays:3,deliveryMaxDays:7,approvalReference:'SYNTHETIC TEST ONLY',expectedRevision:0};
 
 const project = fileURLToPath(new URL('..', import.meta.url));
 const dataDir = await mkdtemp(join(tmpdir(), 'asryo-smoke-'));
@@ -38,7 +40,9 @@ function startServer(storeReady) {
     env: {
       ...process.env, PORT: String(port), DATA_DIR: dataDir, NODE_ENV: 'test',
       STORE_READY: String(storeReady), APP_ORIGIN: base, HIDE_PUBLIC_PRODUCTS: 'false',
-      RESEND_API_KEY: '', MAIL_FROM: '',
+      RESEND_API_KEY: storeReady?'synthetic-email-key':'', MAIL_FROM: storeReady?'test@example.test':'',
+      PUBLIC_BUSINESS_NAME:'Synthetic test store',PUBLIC_SUPPORT_EMAIL:'support@example.test',PUBLIC_SUPPORT_PHONE:'+919876543210',PUBLIC_RETURN_ADDRESS:'Synthetic address',
+      FULFILMENT_APPROVED:'true',POLICIES_APPROVED:'true',NOTIFICATIONS_APPROVED:'true',COD_APPROVED:'true',COD_PINCODES:'302001',SHIPPING_FEE_PAISE:'0',SHIPPING_GST_BPS:'0',
       RAZORPAY_KEY_ID: '', RAZORPAY_KEY_SECRET: '', RAZORPAY_WEBHOOK_SECRET: '',
       ADMIN_EMAIL: adminEmail, ADMIN_PASSWORD: adminPassword,
     },
@@ -131,9 +135,7 @@ try {
   assert.equal(readiness.storeReady, false, 'store is closed by default');
   assert.equal(readiness.paymentMethod, 'cash_on_delivery', 'COD is the only configured payment method');
   const products = (await catalog.json()).products;
-  assert.equal(products.length, sourceCatalog.length, 'all ASRYO preview products load');
-  assert.equal(products.filter(p => p.type === 'Saree').length, 18, 'all source-listed sarees are in the catalog');
-  assert(products.every(p => !p.active), 'preview items remain unavailable for purchase');
+  assert.equal(products.length,0,'unapproved archived records never enter the public selling catalogue');
   assert.equal(adminPage.status, 200, 'admin page loads');
   assert.equal(trackPage.status, 200, 'tracking page loads');
   for (const path of ['/editorial.css','/editorial.js','/speed-division.html','/dream-future.html','/unsubscribe.html','/early-access-confirmed.html','/product.css','/product-page.js','/speed.css']){
@@ -206,6 +208,7 @@ try {
   assert.equal(db.prepare("SELECT payment_method FROM orders WHERE id='legacy-payment-preview'").get().payment_method, 'legacy_online', 'legacy payment records are not mislabeled as COD');
   const product = db.prepare('SELECT id FROM products LIMIT 1').get();
   db.prepare("UPDATE products SET price_paise=200,stock=5,active=1,description='Owner reviewed sample description' WHERE id=?").run(product.id);
+  saveListing(db,product.id,approvedFixture);
   db.close();
   await startServer(true);
 
@@ -217,15 +220,15 @@ try {
   reopened.close();
 
   const openStatus = await (await fetch(`${base}/api/status`)).json();
-  assert.equal(openStatus.storeReady, true, 'an explicitly opened store with available products is ready without payment credentials');
+  assert.equal(openStatus.storeReady, true, 'an approved COD store with reviewed products is ready without online payment credentials');
   assert.equal(openStatus.paymentMethod, 'cash_on_delivery');
   const payload = {
-    email: 'customer@example.test', phone: '+919876543210',
+    email: 'customer@example.test', phone: '+919876543210', termsAccepted:true,
     address: { name: 'Test Customer', line1: '1 Example Road', city: 'Jaipur', region: 'Rajasthan', postalCode: '302001', country: 'India' },
     items: [{ id: product.id, quantity: 2 }],
   };
   const createOrder = () => fetch(`${base}/api/checkout/orders`, {
-    method: 'POST', headers: { Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    method: 'POST', headers: { Origin: base, 'Content-Type': 'application/json', 'Idempotency-Key':crypto.randomUUID() }, body: JSON.stringify(payload),
   });
   const placed = await createOrder();
   assert.equal(placed.status, 201, 'COD order can be placed without any online payment keys');
@@ -234,7 +237,7 @@ try {
   assert.equal(order.amountPaise, 400);
   openDb = new DatabaseSync(join(dataDir, 'asryo.sqlite'));
   const stored = openDb.prepare('SELECT status,payment_status,payment_method,total_paise FROM orders WHERE id=?').get(order.orderId);
-  assert.deepEqual({ ...stored }, { status: 'processing', payment_status: 'due_on_delivery', payment_method: 'cash_on_delivery', total_paise: 400 });
+  assert.deepEqual({ ...stored }, { status: 'confirmed', payment_status: 'due_on_delivery', payment_method: 'cash_on_delivery', total_paise: 400 });
   assert.equal(openDb.prepare('SELECT stock FROM products WHERE id=?').get(product.id).stock, 3, 'stock is reserved on order placement');
 
   const tracking = await fetch(`${base}/api/orders/track?id=${encodeURIComponent(order.orderId)}&token=${encodeURIComponent(order.trackingToken)}`);
@@ -242,7 +245,7 @@ try {
   assert.equal((await tracking.json()).order.paymentStatus, 'due_on_delivery', 'tracking reports cash due on delivery');
 
   const oversell = await fetch(`${base}/api/checkout/orders`, {
-    method: 'POST', headers: { Origin: base, 'Content-Type': 'application/json' },
+    method: 'POST', headers: { Origin: base, 'Content-Type': 'application/json','Idempotency-Key':crypto.randomUUID() },
     body: JSON.stringify({ ...payload, items: [{ id: product.id, quantity: 4 }] }),
   });
   assert.equal(oversell.status, 400, 'stock cannot be oversold');
@@ -325,11 +328,14 @@ try {
   const nextOrder = await (await createOrder()).json();
   const updateStatus = status => fetch(`${base}/api/admin/orders/${nextOrder.orderId}`, {
     method:'PATCH', headers:{Origin:base,Cookie:cookie,'Content-Type':'application/json'},
-    body:JSON.stringify({status})
+    body:JSON.stringify({status,carrier:'Synthetic courier',trackingNumber:'SYNTHETIC-1'})
   });
-  assert.equal((await updateStatus('shipped')).status,200,'processing order ships');
+  assert.equal((await updateStatus('processing')).status,200);
+  assert.equal((await updateStatus('packed')).status,200);
+  assert.equal((await updateStatus('shipped')).status,200,'packed order ships');
   assert.equal((await updateStatus('processing')).status,400,'shipped order cannot be reset');
   assert.equal((await updateStatus('cancelled')).status,400,'shipped order cannot restock through cancellation');
+  assert.equal((await updateStatus('out_for_delivery')).status,200);
   assert.equal((await updateStatus('delivered')).status,200,'shipped order is delivered');
   for (const status of ['processing','shipped','cancelled','delivered']) {
     assert.equal((await updateStatus(status)).status,400,'delivered order is final');
@@ -355,12 +361,13 @@ try {
   assert.equal((await publish(mediumId,99,200)).status,409,'generic product edit cannot bypass stock ledger');
   assert.equal((await publish(mediumId,3,200)).status,200);
   assert.equal((await publish(largeId,5,300)).status,200);
+  saveListing(openDb,firstImport.productId,approvedFixture);
   const publicSizes=(await (await fetch(base+'/api/products')).json()).products;
   assert(!publicSizes.some(p=>p.id===firstImport.productId),'parent design stays private');
   assert.equal(publicSizes.find(p=>p.id===mediumId).variant.size,'M');
   assert.equal(publicSizes.find(p=>p.id===mediumId).variant.reorderPoint,undefined,'private reorder threshold is not public');
   assert.equal((await fetch(base+'/api/products/'+mediumId+'/image',{headers:{Cookie:cookie}})).status,200,'SKU uses approved parent artwork');
-  const sizeCheckout=items=>fetch(base+'/api/checkout/orders',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({...payload,items})});
+  const sizeCheckout=items=>fetch(base+'/api/checkout/orders',{method:'POST',headers:{Origin:base,'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:JSON.stringify({...payload,items})});
   const sizeOrderResponse=await sizeCheckout([{id:mediumId,quantity:2},{id:largeId,quantity:1}]);
   assert.equal(sizeOrderResponse.status,201,'multiple sizes of one design can be purchased together');
   const sizeOrder=await sizeOrderResponse.json();assert.equal(sizeOrder.amountPaise,700);

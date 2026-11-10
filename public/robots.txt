@@ -11,3 +11,10 @@ Disallow: /api/
 Disallow: /early-access-confirmed.html
 Disallow: /unsubscribe.html
 Sitemap: https://asryo.com/sitemap.xml
+
+Disallow: /commerce-admin
+Disallow: /account
+Disallow: /my-orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /wishlist
