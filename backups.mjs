@@ -24,7 +24,7 @@ export function startBackups(dataDir,env=process.env){
    const temporary=await mkdtemp(join(tmpdir(),'asryo-recovery-drill-'));
    try{await restore(target,join(temporary,'restored'));backupState.restoreDrill='verified';}
    finally{await rm(temporary,{recursive:true,force:true});}
-   console.log('database_backup_verified',{createdAt:manifest.createdAt,integrity:'ok',restoreDrill:'verified',storage:'same-volume',offsiteVerified:false});
+   console.log('database_backup_verified '+JSON.stringify({createdAt:manifest.createdAt,integrity:'ok',restoreDrill:'verified',storage:'same-volume',offsiteVerified:false}));
   }catch(error){backupState.integrity='failed';console.error('database_backup_failed',{type:error.name});}
   finally{running=false;}
  };

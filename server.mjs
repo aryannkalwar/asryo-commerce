@@ -15,7 +15,7 @@ import { DatabaseSync } from 'node:sqlite';
 import catalog from './data/catalog.json' with { type: 'json' };
 import { initCommerce, storeReadiness, publicCatalogue, listingFor, saveListing, quote, createCheckout,
   gatewayReadiness, verifyCheckoutPayment, processWebhook, updateOrder, orderDetail, refundOrder,
-  deliverNotifications, reconcilePayment } from './commerce.mjs';
+  deliverNotifications, reconcilePayment, expirePendingOrders } from './commerce.mjs';
 import {startBackups,backupState} from './backups.mjs';
 
 const scrypt = promisify(scryptCallback);
@@ -398,7 +398,7 @@ async function handle(req, res) {
       return json(res,200,{message:'You have been unsubscribed from ASRYO launch updates.'});
     }
 
-    if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: HIDE_PUBLIC_PRODUCTS ? [] : allProducts(false) });
+    if (req.method === 'GET' && path === '/api/products') return json(res, 200, { products: publicCatalogue(db).map(p=>({...p,category:'clothing',image:p.profile.images[0],active:true,options:[]})) });
 
     const productImage = path.match(/^\/api\/products\/([a-zA-Z0-9-]{1,100})\/image$/);
     if (req.method === 'GET' && productImage) {
@@ -417,12 +417,12 @@ async function handle(req, res) {
       const { question = '' } = await jsonBody(req, 12 * 1024);
       const q = String(question).trim().slice(0, 700);
       if (!q) return json(res, 400, { error: 'Ask a question about the collection.' });
-      const products = HIDE_PUBLIC_PRODUCTS ? [] : allProducts().filter(p => p.active).map(p => ({ name:p.name, category:p.category, type:p.type, description:p.description }));
+      const products = publicCatalogue(db).map(p => ({ name:p.name, category:'clothing', type:p.type, description:p.description }));
       if (!process.env.OPENAI_API_KEY) {
         const ql = q.toLowerCase();
         const groups = ['clothing','jewellery','art','home-lifestyle'];
         const selected = groups.find(g => ql.includes(g.replace('-', ' ')) || ql.includes(g.split('-')[0])) || 'clothing';
-        const recs = HIDE_PUBLIC_PRODUCTS ? [] : allProducts().filter(p => p.category === selected).slice(0, 3).map(p => p.name);
+        const recs = selected==='clothing'?publicCatalogue(db).slice(0,3).map(p=>p.name):[];
         return json(res, 200, { mode:'preview', answer: recs.length ? `I can help you explore ${selected.replace('-', ' ')}. These pieces are currently listed as launch previews; prices and availability are still being confirmed.` : 'The ASRYO collection is in preview. Tell me whether you are browsing clothing, jewellery, art or home, and I can point you to the right edit.', suggestions: recs });
       }
       const response = await fetch('https://api.openai.com/v1/responses', {
@@ -542,7 +542,8 @@ async function handle(req, res) {
       if(active && hasSkus(db,id))return json(res,400,{error:'Publish the individual size SKUs; the parent design cannot be sold separately.'});
       const currentStock=db.prepare('SELECT stock FROM products WHERE id=?').get(id).stock;
       if(skuMetadata(db,id) && stock!==currentStock)return json(res,409,{error:'Use Inventory to record stock changes with a reason; refresh this product first.'});
-      if((price!==null && (!Number.isSafeInteger(price)||price<1)) || (stock!==null && (!Number.isInteger(stock)||stock<0)) || (active && (price===null || stock===null))) return json(res,400,{error:'An active product needs a valid price and stock count.'});
+      const preorder=listingFor(db,id)?.mode==='preorder';
+      if((price!==null && (!Number.isSafeInteger(price)||price<1)) || (stock!==null && (!Number.isInteger(stock)||stock<0)) || (active && (price===null || (!preorder && stock===null)))) return json(res,400,{error:'An active product needs a valid price and confirmed ready stock, or an approved pre-order release.'});
       db.prepare('UPDATE products SET description=?,price_paise=?,stock=?,active=?,options_json=?,updated_at=? WHERE id=?')
         .run(String(p.description||'').slice(0,2500),price,stock,active?1:0,JSON.stringify(Array.isArray(p.options)?p.options.slice(0,30):[]),now(),id);
       return json(res,200,{product:productRow(db.prepare('SELECT * FROM products WHERE id=?').get(id))});
@@ -648,7 +649,7 @@ server.listen(port,'0.0.0.0',()=>console.log(`ASRYO server listening on ${port}`
 if(process.env.NODE_ENV!=='test') {
   startBackups(dataDir);
   let notifying=false;
-  const notify=async()=>{if(notifying)return;notifying=true;try{await deliverNotifications(db);}catch{console.error('order_notification_retry_failed');}finally{notifying=false;}};
+  const notify=async()=>{if(notifying)return;notifying=true;try{expirePendingOrders(db);await deliverNotifications(db);}catch{console.error('order_notification_retry_failed');}finally{notifying=false;}};
   setInterval(notify,60*1000).unref();
 }
 

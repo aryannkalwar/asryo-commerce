@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import sourceCatalog from '../data/catalog.json' with { type: 'json' };
 import {saveListing} from '../commerce.mjs';
-const approvedFixture={mode:'ready_stock',approved:true,specificationsVerified:true,imagesVerified:true,stockVerified:true,taxConfirmed:true,fabric:'Synthetic test garment',gsm:240,fit:'Synthetic fixture',sizeGuide:'Synthetic measurements',images:['/assets/asryo-speed-division-front.webp','/assets/asryo-speed-division-back.webp'],gstBps:0,deliveryMinDays:3,deliveryMaxDays:7,approvalReference:'SYNTHETIC TEST ONLY',expectedRevision:0};
+const approvedFixture={mode:'ready_stock',cancellationTerms:'Synthetic cancellation terms',refundTerms:'Synthetic refund terms',approved:true,specificationsVerified:true,imagesVerified:true,stockVerified:true,taxConfirmed:true,fabric:'Synthetic test garment',gsm:240,fit:'Synthetic fixture',sizeGuide:'Synthetic measurements',images:['/assets/asryo-speed-division-front.webp','/assets/asryo-speed-division-back.webp'],gstBps:0,deliveryMinDays:3,deliveryMaxDays:7,approvalReference:'SYNTHETIC TEST ONLY',expectedRevision:0};
 
 const project = fileURLToPath(new URL('..', import.meta.url));
 const dataDir = await mkdtemp(join(tmpdir(), 'asryo-smoke-'));
@@ -135,9 +135,7 @@ try {
   assert.equal(readiness.storeReady, false, 'store is closed by default');
   assert.equal(readiness.paymentMethod, 'cash_on_delivery', 'COD is the only configured payment method');
   const products = (await catalog.json()).products;
-  assert.equal(products.length, sourceCatalog.length, 'all ASRYO preview products load');
-  assert.equal(products.filter(p => p.type === 'Saree').length, 18, 'all source-listed sarees are in the catalog');
-  assert(products.every(p => !p.active), 'preview items remain unavailable for purchase');
+  assert.equal(products.length,0,'unapproved archived records never enter the public selling catalogue');
   assert.equal(adminPage.status, 200, 'admin page loads');
   assert.equal(trackPage.status, 200, 'tracking page loads');
   for (const path of ['/editorial.css','/editorial.js','/speed-division.html','/dream-future.html','/unsubscribe.html','/early-access-confirmed.html','/product.css','/product-page.js','/speed.css']){
@@ -363,12 +361,12 @@ try {
   assert.equal((await publish(mediumId,99,200)).status,409,'generic product edit cannot bypass stock ledger');
   assert.equal((await publish(mediumId,3,200)).status,200);
   assert.equal((await publish(largeId,5,300)).status,200);
+  saveListing(openDb,firstImport.productId,approvedFixture);
   const publicSizes=(await (await fetch(base+'/api/products')).json()).products;
   assert(!publicSizes.some(p=>p.id===firstImport.productId),'parent design stays private');
   assert.equal(publicSizes.find(p=>p.id===mediumId).variant.size,'M');
   assert.equal(publicSizes.find(p=>p.id===mediumId).variant.reorderPoint,undefined,'private reorder threshold is not public');
   assert.equal((await fetch(base+'/api/products/'+mediumId+'/image',{headers:{Cookie:cookie}})).status,200,'SKU uses approved parent artwork');
-  saveListing(openDb,firstImport.productId,approvedFixture);
   const sizeCheckout=items=>fetch(base+'/api/checkout/orders',{method:'POST',headers:{Origin:base,'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:JSON.stringify({...payload,items})});
   const sizeOrderResponse=await sizeCheckout([{id:mediumId,quantity:2},{id:largeId,quantity:1}]);
   assert.equal(sizeOrderResponse.status,201,'multiple sizes of one design can be purchased together');

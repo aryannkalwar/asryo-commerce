@@ -77,6 +77,7 @@ export function profileProblems(profile, now = new Date()) {
   if (!Number.isSafeInteger(profile.gstBps) || profile.gstBps < 0 || profile.gstBps > 10000 || !profile.taxConfirmed) problems.push('Confirm the applicable GST rate and tax-inclusive price.');
   if (!profile.imagesVerified || profile.images.length < 2 || !profile.sizeGuide) problems.push('Approve front/back photographs and the measured size guide.');
   if (!Number.isSafeInteger(profile.deliveryMinDays) || !Number.isSafeInteger(profile.deliveryMaxDays) || profile.deliveryMinDays < 1 || profile.deliveryMaxDays < profile.deliveryMinDays) problems.push('Confirm a supported delivery window.');
+  if(!profile.cancellationTerms || !profile.refundTerms)problems.push('Approve the product cancellation and return/refund conditions.');
   if (profile.mode === 'ready_stock' && !profile.stockVerified) problems.push('Verify physical inventory.');
   if (profile.mode === 'preorder') {
     if (!profile.manufacturingConfirmed || !Number.isSafeInteger(profile.capacity) || profile.capacity < 1) problems.push('Confirm manufacturing capacity.');
@@ -216,6 +217,7 @@ function checkoutResponse(db, checkout, key, env) {
   const order = db.prepare('SELECT * FROM orders WHERE id=?').get(checkout.order_id);
   return {orderId:order.id,trackingToken:trackingToken(checkout.access_seed,order.id),amountPaise:order.total_paise,currency:'INR',paymentMethod:order.payment_method,
     status:order.status,paymentStatus:order.payment_status,gatewayOrderId:checkout.gateway_order_id,
+    reservationExpiresAt:order.payment_method==='razorpay'?new Date(Date.parse(checkout.created_at)+30*60*1000).toISOString():null,
     keyId:order.payment_method === 'razorpay' ? env.RAZORPAY_KEY_ID : null};
 }
 async function gatewayRequest(env, path, options = {}, fetcher = fetch) {
@@ -402,6 +404,12 @@ export function updateOrder(db, orderId, input, actor = 'admin') {
     audit(db,orderId,'status_changed',{from:order.status,to:status,actor});queue(db,orderId,status);
     db.exec('COMMIT');return {ok:true};
   }catch(error){db.exec('ROLLBACK');throw error;}
+}
+export function expirePendingOrders(db,now=new Date()){
+  const cutoff=new Date(now.getTime()-30*60*1000).toISOString();
+  const orders=db.prepare("SELECT c.order_id FROM commerce_checkouts c JOIN orders o ON o.id=c.order_id WHERE o.status='pending_payment' AND c.gateway_state='ready' AND c.released=0 AND c.created_at<?").all(cutoff);
+  for(const row of orders)updateOrder(db,row.order_id,{status:'cancelled'},'reservation_timeout');
+  return {expired:orders.length};
 }
 export async function refundOrder(db, orderId, reason, env = process.env, fetcher = fetch) {
   if (!gatewayReadiness(env).enabled || !flag(env.REFUNDS_APPROVED)) fail(503,'Refund execution is not enabled. Review the request in the merchant dashboard.');
