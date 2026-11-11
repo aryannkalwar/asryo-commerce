@@ -19,7 +19,7 @@ Purchase-order approval and recording an actual external supplier order require 
 
 Promotions are validated server-side for dates in India, minimum product value, approved discount cap and maximum uses. Redemptions are reserved in the same order transaction as stock and released once on cancellation/expiry. Customer-supplied prices or discount amounts are ignored. GST is recalculated from discounted inclusive line amounts.
 
-Only confirmed unit costs are snapshotted into new orders. Later cost edits cannot change old orders or selling prices. Management reports recognize delivered paid/collected orders, keep inventory purchases separate from operating expenses, and leave profit unknown when confirmed order costs are missing. The GST working summary is not filing-ready: actual GSTIN, business state, place of supply, invoices and input-credit treatment remain required. No financial records or revenue are fabricated.
+Only confirmed unit costs are snapshotted into new orders. Later cost edits cannot change old orders or selling prices. Management report periods and CSV sale dates use the Indian calendar (Asia/Kolkata). Pre-order dispatch cutoffs also use the Indian calendar. Management reports recognize delivered paid/collected orders, keep inventory purchases separate from operating expenses, and leave profit unknown when confirmed order costs are missing. The GST working summary is not filing-ready: actual GSTIN, business state, place of supply, invoices and input-credit treatment remain required. No financial records or revenue are fabricated.
 
 ## Authoritative deployment
 
