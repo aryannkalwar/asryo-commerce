@@ -2,7 +2,7 @@ import {renderDesign,escapeXML} from './studio-render.js';
 const $=id=>document.getElementById(id);
 const makeLayer=()=>({text:'',ink:'#d4c4a8',artwork:'',x:300,y:290,width:160,rotation:0});
 const blank=()=>({id:null,name:'Untitled ASRYO design',status:'draft',revision:0,design:{garment:'tshirt',color:'#202124',fabric:'',gsm:null,printMethod:'',notes:'',measurements:{chest:null,length:null,printWidth:null},sides:{front:{...makeLayer(),text:'ASRYO'},back:makeLayer()}}});
-const state={project:blank(),side:'front',authenticated:false,busy:false,dirty:false,undo:[],redo:[],projects:[]};
+const state={project:blank(),side:'front',authenticated:false,role:null,busy:false,dirty:false,undo:[],redo:[],projects:[]};
 const clone=value=>structuredClone(value);
 const layer=()=>state.project.design.sides[state.side];
 function message(value){$('message').textContent=value;}
@@ -20,11 +20,11 @@ function controls(){
  $('undo').disabled=!enabled||!state.undo.length;$('redo').disabled=!enabled||!state.redo.length;
  const saved=enabled&&state.project.id&&!state.dirty;
  $('review').disabled=!saved||state.project.status!=='draft';
- $('approve').disabled=!saved||state.project.status!=='in_review';
- $('draft-sku').disabled=!saved||state.project.status!=='approved';
+ $('approve').disabled=!saved||!['owner','manager'].includes(state.role)||state.project.status!=='in_review';
+ $('draft-sku').disabled=!saved||!['owner','manager'].includes(state.role)||state.project.status!=='approved';
  for(const id of ['export-front','export-back','export-pack','print-pack'])$(id).disabled=!saved;
  $('login-panel').hidden=state.authenticated;
- $('session').textContent=state.authenticated?'Owner / commerce session verified':'Sign-in required · no project data loaded';
+ $('session').textContent=state.authenticated?(state.role||'Authorized staff')+' session verified':'Sign-in required · no project data loaded';
  $('project-status').textContent=state.dirty?'UNSAVED DRAFT':state.project.status.replaceAll('_',' ').toUpperCase();
  $('save-state').textContent=!state.authenticated?'Sign in to begin':state.busy?'Working…':state.dirty?'Unsaved changes':state.project.id?'Saved · revision '+state.project.revision:'New project';
  $('revision').textContent=state.project.id?'Revision '+state.project.revision+' · '+(state.project.updatedAt?new Date(state.project.updatedAt).toLocaleString('en-IN'):''):'New design · not saved';
@@ -128,7 +128,7 @@ $('print-pack').addEventListener('click',()=>{
 });
 window.addEventListener('beforeunload',event=>{if(state.dirty){event.preventDefault();event.returnValue='';}});
 async function connect(){
- await busy(async()=>{await refreshList();state.authenticated=true;state.dirty=!state.project.id;populate();message('Workspace connected. Save a new project or load an existing design.');});
+ await busy(async()=>{await refreshList();const identity=await fetch('/api/admin/me',{credentials:'same-origin',cache:'no-store'});if(!identity.ok)throw Error('Staff session could not be verified.');state.role=(await identity.json()).role;state.authenticated=true;state.dirty=!state.project.id;populate();message('Workspace connected. Save a new project or load an existing design.');});
  fetch('/api/control',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json()).then(d=>{$('ai-status').textContent=d.aiConnected===true?'Fashion AI connected':'AI not configured · manual editor ready';}).catch(()=>{$('ai-status').textContent='AI status unavailable · manual editor ready';});
 }
 $('retry').addEventListener('click',connect);

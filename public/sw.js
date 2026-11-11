@@ -1,9 +1,9 @@
 // ASRYO offline support is strictly for PUBLIC product previews.
 // Never store owner, manufacturing, orders, account details or private APIs in browser caches.
 const CACHE_PREFIX='asryo-';
-const SHELL_CACHE='asryo-public-shell-v11';
+const SHELL_CACHE='asryo-public-shell-v12';
 const DATA_CACHE='asryo-public-data-v4';
-const ASSET_CACHE='asryo-public-assets-v11';
+const ASSET_CACHE='asryo-public-assets-v12';
 const PUBLIC_PAGES=new Set([
  '/','/index.html','/offline.html','/about.html','/policies.html',
  '/speed-division.html','/dream-future.html','/shadowbound.html',
@@ -11,6 +11,7 @@ const PUBLIC_PAGES=new Set([
  '/concept-visuals.html','/red-sun-002.html','/celestial-001.html'
 ]);
 const PRIVATE_PATHS=new Set([
+ '/operations-admin','/operations-admin.html','/operations-admin.js',
  '/commerce-admin','/commerce-admin.html','/commerce-admin.js','/store.js','/account','/my-orders','/cart','/checkout','/wishlist',
  '/admin.js','/admin.css','/inventory.js','/admin','/admin.html','/workspace','/workspace.html',
  '/fashion-os','/dashboard','/dashboard.html',

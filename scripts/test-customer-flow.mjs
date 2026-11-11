@@ -5,7 +5,7 @@ import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHash} from 'node:crypto';
 import {saveListing} from '../commerce.mjs';
 
 // Every email and business fact in this test is synthetic and confined to an isolated database.
@@ -72,6 +72,21 @@ try{
  assert.equal(db.prepare("SELECT stock FROM products WHERE id='preorder-test'").get().stock,null);
  assert.equal((await request('/api/admin/commerce',null,adminCookie)).status,200,'admin can inspect commerce readiness and release profiles');
  assert.equal((await request('/api/admin/commerce/orders',null,adminCookie)).status,200);
+ const staffInput={name:'Synthetic viewer',email:'viewer@example.test',password:'synthetic-viewer-password',role:'viewer',enabled:true,expectedRevision:0};
+ const newStaff=await request('/api/admin/operations/staff',staffInput,adminCookie);assert.equal(newStaff.status,200);const staffId=(await newStaff.json()).id;
+ const staffLogin=await request('/api/admin/login',{email:staffInput.email,password:staffInput.password});assert.equal(staffLogin.status,200);assert.equal((await staffLogin.json()).role,'viewer');const staffCookie=staffLogin.headers.get('set-cookie').split(';')[0];
+ assert.equal((await request('/api/admin/products',null,staffCookie)).status,200);
+ assert.equal((await request('/api/admin/orders',null,staffCookie)).status,403);
+ assert.equal((await fetch(base+'/api/admin/products/customer-test-shirt',{method:'PATCH',headers:{Origin:base,Cookie:staffCookie,'Content-Type':'application/json'},body:JSON.stringify({pricePaise:1,stock:99,active:true})})).status,403);
+ assert.equal((await request('/api/admin/operations/staff',{...staffInput,email:'escalated@example.test'},staffCookie)).status,403);
+ const staffToken=decodeURIComponent(staffCookie.split('=')[1]);assert.equal(db.prepare('SELECT 1 FROM admin_sessions WHERE token_hash=?').get(createHash('sha256').update(staffToken).digest('hex')),undefined,'a staff token cannot be elevated by rollback to the old owner-only session code');
+ assert.equal((await request('/api/admin/operations/staff',{...staffInput,id:staffId,password:'',enabled:false,expectedRevision:1},adminCookie)).status,200);
+ assert.equal((await request('/api/admin/products',null,staffCookie)).status,401,'disabling staff revokes their current session');
+ assert.equal((await request('/api/admin/operations',null,adminCookie)).status,200,'owner can use the private business records dashboard');
+ const financeStaff=await request('/api/admin/operations/staff',{...staffInput,email:'finance@example.test',name:'Synthetic finance',role:'finance'},adminCookie);assert.equal(financeStaff.status,200);
+ const financeLogin=await request('/api/admin/login',{email:'finance@example.test',password:staffInput.password});assert.equal(financeLogin.status,200);const financeCookie=financeLogin.headers.get('set-cookie').split(';')[0];
+ const financeExpense=await request('/api/admin/operations/expenses',{date:'2026-11-11',category:'operating',amountPaise:10000,includedGstPaise:0,description:'Synthetic finance HTTP test',reference:'SYNTHETIC-HTTP-EXPENSE',confirmActual:true,requestId:randomUUID()},financeCookie);assert.equal(financeExpense.status,201);const expenseId=(await financeExpense.json()).id;
+ assert.equal((await request('/api/admin/operations/expenses/'+expenseId+'/void',{expectedRevision:1,reason:'Synthetic HTTP correction'},financeCookie)).status,200,'finance role can void a mistaken expense without deleting its record');
  await request('/api/auth/logout',{},customer);assert.equal((await request('/api/auth/me',null,customer)).status,401,'logout revokes the stored session');
  console.log('Customer flow verified: mocked verification email → account activation → login → idempotent order → account-scoped history → cancellation → admin access. No real mail or payment was sent.');
 }finally{

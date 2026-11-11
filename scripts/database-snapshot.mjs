@@ -50,7 +50,7 @@ export async function restore(snapshotDirectory, destination) {
     const db=new DatabaseSync(file);
     try {
       const tables=new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(x=>x.name));
-      for (const table of ['sessions','admin_sessions']) if(tables.has(table)) db.exec(`DELETE FROM ${table}`);
+      for (const table of ['sessions','admin_sessions','ops_staff_sessions']) if(tables.has(table)) db.exec(`DELETE FROM ${table}`);
       db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
     } finally {db.close();}
     inspect(file);
