@@ -1,7 +1,7 @@
 // Server-only Shiprocket serviceability adapter. No customer orders or shipments are created here.
 // Docs: https://apidocs.shiprocket.in/
 const BASE = 'https://apiv2.shiprocket.in/v1/external';
-const pin = value => /^\\d{6}$/.test(String(value ?? ''));
+const pin = value => /^\d{6}$/.test(String(value ?? ''));
 const fail = message => { throw new Error(message); };
 export function shiprocketConfigured(env = process.env) {
   return Boolean(env.SHIPROCKET_API_EMAIL && env.SHIPROCKET_API_PASSWORD && pin(env.SHIPROCKET_PICKUP_PINCODE));
