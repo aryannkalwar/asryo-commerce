@@ -154,7 +154,7 @@ export async function staffSave(db,input,actor,passwordHash){
 
 export function managementReport(db,from='0000-01-01',to='9999-12-31'){
  if((from!=='0000-01-01'&&!dateOK(from))||(to!=='9999-12-31'&&!dateOK(to))||from>to)fail(400,'Choose a valid reporting period.');
- const orders=db.prepare('SELECT o.*,c.snapshot_json FROM orders o LEFT JOIN commerce_checkouts c ON c.order_id=o.id WHERE substr(o.created_at,1,10)>=? AND substr(o.created_at,1,10)<=? ORDER BY o.created_at').all(from,to);
+ const orders=db.prepare("SELECT o.*,date(o.created_at,'+5 hours','+30 minutes') AS india_date,c.snapshot_json FROM orders o LEFT JOIN commerce_checkouts c ON c.order_id=o.id WHERE date(o.created_at,'+5 hours','+30 minutes')>=? AND date(o.created_at,'+5 hours','+30 minutes')<=? ORDER BY o.created_at").all(from,to);
  const expenses=db.prepare('SELECT * FROM ops_expenses WHERE date>=? AND date<=? AND voided_at IS NULL ORDER BY date').all(from,to);
  let recognizedSalesPaise=0,includedOutputGstPaise=0,knownCogsPaise=0,unknownCostOrders=0,missingSnapshotOrders=0;
  const sales=[];
@@ -166,11 +166,11 @@ export function managementReport(db,from='0000-01-01',to='9999-12-31'){
   const known=snapshot.items.every(x=>Number.isSafeInteger(x.unitCostPaise));
   const cogs=known?snapshot.items.reduce((n,x)=>n+x.unitCostPaise*x.quantity,0):null;
   if(cogs===null)unknownCostOrders++;else knownCogsPaise+=cogs;
-  sales.push({orderId:order.id,date:order.created_at.slice(0,10),totalPaise:order.total_paise,includedGstPaise:snapshot.taxPaise,cogsPaise:cogs,discountPaise:snapshot.discountPaise||0});
+  sales.push({orderId:order.id,date:order.india_date,totalPaise:order.total_paise,includedGstPaise:snapshot.taxPaise,cogsPaise:cogs,discountPaise:snapshot.discountPaise||0});
  }
  const operatingExpensesPaise=expenses.filter(x=>x.category!=='inventory_purchase').reduce((n,x)=>n+x.amount_paise,0);
  const inventoryPurchasesPaise=expenses.filter(x=>x.category==='inventory_purchase').reduce((n,x)=>n+x.amount_paise,0);
- return {from,to,recognizedSalesPaise:missingSnapshotOrders?null:recognizedSalesPaise,includedOutputGstPaise:missingSnapshotOrders?null:includedOutputGstPaise,knownCogsPaise,unknownCostOrders,missingSnapshotOrders,operatingExpensesPaise,inventoryPurchasesPaise,
+ return {from,to,timeZone:'Asia/Kolkata',recognizedSalesPaise:missingSnapshotOrders?null:recognizedSalesPaise,includedOutputGstPaise:missingSnapshotOrders?null:includedOutputGstPaise,knownCogsPaise,unknownCostOrders,missingSnapshotOrders,operatingExpensesPaise,inventoryPurchasesPaise,
   managementProfitPaise:unknownCostOrders?null:recognizedSalesPaise-knownCogsPaise-operatingExpensesPaise,
   sales,expenses,note:'Management view of delivered, paid/collected orders and recorded gross operating expenses. Inventory purchases are separate from COGS. Missing confirmed order-time costs keep profit unknown. GST totals are not a filing or tax invoice.',
   gstFilingReady:false,gstFilingBlocker:'GSTIN, business state, place of supply, invoice review and input-tax-credit treatment must be confirmed.'};

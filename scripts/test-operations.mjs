@@ -66,6 +66,17 @@ test('management reports use immutable confirmed order costs and keep inventory 
 test('missing confirmed order costs keep management profit unknown',async()=>{
  const db=fixture(),order=await createCheckout(db,orderInput,randomUUID(),null,env);for(const status of ['processing','packed','shipped','out_for_delivery','delivered'])updateOrder(db,order.orderId,{status,carrier:'Synthetic courier',trackingNumber:'TEST'});const r=managementReport(db);assert.equal(r.managementProfitPaise,null);assert.equal(r.unknownCostOrders,1);db.close();
 });
+test('reporting periods and CSV dates use Indian midnight rather than UTC midnight',async()=>{
+ const db=fixture(),orders=[];
+ for(const createdAt of ['2026-11-10T18:29:59Z','2026-11-10T18:30:00Z']){
+  const order=await createCheckout(db,orderInput,randomUUID(),null,env);orders.push(order.orderId);
+  db.prepare('UPDATE orders SET created_at=? WHERE id=?').run(createdAt,order.orderId);
+  for(const status of ['processing','packed','shipped','out_for_delivery','delivered'])updateOrder(db,order.orderId,{status,carrier:'Synthetic courier',trackingNumber:'SYNTHETIC-IST'});
+ }
+ const previous=managementReport(db,'2026-11-10','2026-11-10'),today=managementReport(db,'2026-11-11','2026-11-11');
+ assert.deepEqual(previous.sales.map(x=>x.orderId),[orders[0]]);assert.deepEqual(today.sales.map(x=>x.orderId),[orders[1]]);
+ assert.equal(today.timeZone,'Asia/Kolkata');assert.equal(today.sales[0].date,'2026-11-11');assert.match(reportCSV(today),/2026-11-11/);db.close();
+});
 test('CSV export escapes spreadsheet formula injection in supplier and expense references',()=>{
  const db=fixture();expenseCreate(db,{date:'2026-11-11',category:'other',amountPaise:10000,includedGstPaise:0,description:'Synthetic CSV safety',reference:'=HYPERLINK("https://example.test")',confirmActual:true},finance);assert.match(reportCSV(managementReport(db)),/"'=HYPERLINK/);db.close();
 });

@@ -82,7 +82,7 @@ export function profileProblems(profile, now = new Date()) {
   if (profile.mode === 'ready_stock' && !profile.stockVerified) problems.push('Verify physical inventory.');
   if (profile.mode === 'preorder') {
     if (!profile.manufacturingConfirmed || !Number.isSafeInteger(profile.capacity) || profile.capacity < 1) problems.push('Confirm manufacturing capacity.');
-    if (!validDate(profile.dispatchDate) || profile.dispatchDate < now.toISOString().slice(0,10)) problems.push('Confirm a future dispatch date.');
+    if (!validDate(profile.dispatchDate) || profile.dispatchDate < now.toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'})) problems.push('Confirm a future dispatch date.');
     if (!profile.cancellationTerms || !profile.refundTerms || profile.paymentTiming!=='Full payment is collected immediately at checkout.') problems.push('Disclose immediate payment collection, cancellation and refund terms.');
   }
   return problems;
