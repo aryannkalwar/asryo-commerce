@@ -27,7 +27,7 @@ Use [`docs/COMMERCE_OPERATIONS.md`](docs/COMMERCE_OPERATIONS.md) for authoritati
 - Admin login requires `ADMIN_EMAIL` and a strong `ADMIN_PASSWORD` in the target environment. Those credentials are not in this repository.
 - The store remains explicitly closed until products, contacts, policies, fulfillment and (separately, if used) customer account verification are ready. Leaving `STORE_READY` unset/false and hiding products is intentional.
 
-ASRYO storefront for Node.js 22.16 or later. It uses built-in Node modules and SQLite.
+ASRYO storefront for Node.js 22.16 or later. It uses built-in SQLite and the pinned AWS S3 client for private off-volume backups.
 
 ## Current state
 
@@ -43,10 +43,10 @@ ASRYO storefront for Node.js 22.16 or later. It uses built-in Node modules and S
 
 1. Copy `.env.example` to `.env` and set `APP_ORIGIN` for the local URL.
 2. Set `DATA_DIR` to a persistent private data directory outside the public web folder.
-3. Run `npm run check`, then `npm start`.
+3. Run `npm ci --ignore-scripts`, then `npm run check` and `npm start`.
 4. Open `http://localhost:3000/`. Admin is at `/admin`.
 
-No package install is needed. `npm run check` runs syntax checks and local HTTP smoke checks using a temporary SQLite directory.
+`npm run check` runs syntax checks and local HTTP smoke checks using a temporary SQLite directory. Backup tests use synthetic records and simulated private object storage; deployment logs establish actual remote upload and recovery verification.
 
 ## Before opening checkout
 

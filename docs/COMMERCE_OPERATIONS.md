@@ -57,6 +57,7 @@ The public storefront stays restricted unless every required condition is met. S
 | `REFUNDS_APPROVED=true` | Owner-authorized refund operations with the merchant |
 | `HIDE_PUBLIC_PRODUCTS=false`, `STORE_READY=true` | Final release after all gates and product-level checks pass |
 | `DAILY_BACKUPS=true` | Enables daily private snapshots and isolated restore drills |
+| `OFFSITE_BACKUPS=true`, `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_REGION`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, `BACKUP_S3_URL_STYLE`, `BACKUP_S3_PREFIX` | Private Railway bucket, credential references, correct URL style and a distinct `asryo-production` / `asryo-staging` scope; HTTPS only |
 
 Missing settings must never be substituted with synthetic values outside disposable tests. `/api/admin/commerce` shows blockers to an authenticated owner. `/api/storefront` exposes only public readiness and approved catalogue facts. Setting global readiness does not make an unapproved product purchasable.
 
@@ -80,7 +81,13 @@ Confirmation and status messages use a durable outbox with provider idempotency 
 
 When enabled, `backups.mjs` creates dated private snapshots in `/data/backups`, verifies SHA-256 and SQLite integrity, and restores to a new temporary directory for a recovery drill. Sessions are revoked in restored copies. The live database is never overwritten. No automatic deletion or retention purge is performed.
 
-**These snapshots share the application volume.** They protect against application-level corruption and bad changes, not loss of the entire volume/account. Configure and verify provider-level/offsite backups before declaring disaster recovery complete. Monitor volume usage; define approved retention externally.
+Local snapshots share the application volume. With `OFFSITE_BACKUPS=true`, the daily verified snapshot is also uploaded to a separate private Railway object-storage bucket. Database objects use a date/hash key and conditional create-only writes; the manifest is uploaded last. Every run downloads the remote manifest and database, checks SHA-256 and length, then restores only into a new temporary directory and verifies SQLite integrity and session revocation. A successful upload alone never marks offsite recovery verified. Failed operations retry every thirty minutes without deleting or overwriting any backup. Successful daily copies are checked once per UTC day and on deployment startup.
+
+Use host variable references such as `${{asryo-backups.ACCESS_KEY_ID}}` and `${{asryo-backups.SECRET_ACCESS_KEY}}`. Never copy credentials into source, output or public configuration. The AWS S3 client dependency is pinned in `package-lock.json`; use `npm ci --ignore-scripts` before validation or startup. Remote transfers are bounded to 128 MiB per snapshot; exceeding that limit fails verification and requires a reviewed streaming-backup upgrade.
+
+The private Commerce dashboard shows the last remote verification time and recovery key. To recover in an isolated, authorized environment with the private backup settings present, run `node scripts/recover-offsite.mjs BACKUP_KEY NEW_PRIVATE_DIRECTORY`. The destination must not exist. It never replaces the live database or resurrects customer/owner/staff sessions. Verify recovered records before any separately approved production data cutover.
+
+The separate bucket protects against loss of the application volume. It remains within the same Railway account; this is not independent account-level disaster recovery. No public URLs, ACLs, backup deletions or automatic retention purges are created. Monitor volume/bucket usage and set approved retention externally. Provider account access, recovery credentials and alert delivery require operational verification.
 
 Rollback code to a verified previous Railway deployment. All commerce schema additions are additive; code rollback must not drop tables or restore over newer customer/order data. Inspect current deployment and take a snapshot before any later data migration. Never blindly accept pre-existing staged Railway changes.
 
