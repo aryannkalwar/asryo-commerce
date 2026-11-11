@@ -1,5 +1,26 @@
 # Customer ordering operations
 
+## Private business administration
+
+`/operations-admin` adds staff access, supplier records, purchase-order drafts and approval history, actual expenses with auditable voids, confirmed landed unit costs, owner-approved promotions, a management P&L view and an authenticated CSV export. No supplier email, purchase submission or bank transaction is performed by this dashboard.
+
+| Role | Permitted work | Owner-only boundaries |
+|---|---|---|
+| Owner | Full authorized administration | Creates/disables staff and approves sensitive operations |
+| Manager | Store operations, supplier records, purchase drafts/receipts, promotion drafts | Cannot manage staff, execute refunds, approve/place supplier order records, activate/change live promotions, or record actual expenses/costs |
+| Operator | Product/inventory reads and customer-order fulfilment | Cannot publish products, manage finance, read the customer directory, or execute refunds |
+| Designer | Save, review and export private design drafts | Cannot approve designs or create commerce drafts |
+| Finance | Management reports, actual expenses and confirmed unit costs | Cannot change products, staff, promotions or execute refunds |
+| Viewer | Product and inventory reads | Cannot read customer orders or make changes |
+
+Staff passwords are hashed; role/enablement changes revoke staff sessions. Staff sessions use a separate database table from owner sessions so a rollback to older owner-only code cannot elevate a staff token. Backup restores revoke customer, owner and staff sessions. No staff accounts are seeded into production.
+
+Purchase-order approval and recording an actual external supplier order require the owner. Recording received goods requires an actual receipt reference; it does not add sellable stock. Inventory receipts and QC remain separate explicit actions. Expenses require confirmation of actual source records; request references protect retries, and corrections retain the original row and an audit reason.
+
+Promotions are validated server-side for dates in India, minimum product value, approved discount cap and maximum uses. Redemptions are reserved in the same order transaction as stock and released once on cancellation/expiry. Customer-supplied prices or discount amounts are ignored. GST is recalculated from discounted inclusive line amounts.
+
+Only confirmed unit costs are snapshotted into new orders. Later cost edits cannot change old orders or selling prices. Management reports recognize delivered paid/collected orders, keep inventory purchases separate from operating expenses, and leave profit unknown when confirmed order costs are missing. The GST working summary is not filing-ready: actual GSTIN, business state, place of supply, invoices and input-credit treatment remain required. No financial records or revenue are fabricated.
+
 ## Authoritative deployment
 
 `aryannkalwar/asryo-commerce`, `main` → Railway **ASRYO Commerce / asryo-web**, production environment `2b0e1881-afcf-42c6-a4f8-7c12dab14930`.

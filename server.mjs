@@ -17,6 +17,7 @@ import { initCommerce, storeReadiness, publicCatalogue, listingFor, saveListing,
   gatewayReadiness, verifyCheckoutPayment, processWebhook, updateOrder, orderDetail, refundOrder,
   deliverNotifications, reconcilePayment, expirePendingOrders } from './commerce.mjs';
 import {startBackups,backupState} from './backups.mjs';
+import {initOperations,staffCan,handleOperations} from './operations.mjs';
 
 const scrypt = promisify(scryptCallback);
 const root = fileURLToPath(new URL('.', import.meta.url));
@@ -89,6 +90,7 @@ if (!db.prepare('PRAGMA table_info(orders)').all().some(column => column.name ==
 
 initInventory(db);
 initCommerce(db);
+initOperations(db);
 
 const now = () => new Date().toISOString();
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -207,8 +209,15 @@ function customerFrom(req) {
 function requireAdmin(req) {
   const raw = cookies(req).asryo_admin;
   if (!raw) throw Object.assign(new Error('Admin sign-in required'), { status: 401 });
-  const session = db.prepare('SELECT 1 FROM admin_sessions WHERE token_hash=? AND expires_at>?').get(hash(raw), Date.now());
+  const ownerSession=db.prepare('SELECT 1 FROM admin_sessions WHERE token_hash=? AND expires_at>?').get(hash(raw),Date.now());
+  // Staff tokens use a separate table. A rollback to older owner-only code must never elevate staff sessions.
+  const session=ownerSession?{staff_id:null}:db.prepare('SELECT s.staff_id,u.email,u.role,u.enabled FROM ops_staff_sessions s JOIN ops_staff u ON u.id=s.staff_id WHERE s.token_hash=? AND s.expires_at>?').get(hash(raw),Date.now());
   if (!session) throw Object.assign(new Error('Admin sign-in required'), { status: 401 });
+  if(session.staff_id && !session.enabled)throw Object.assign(new Error('Staff access is disabled.'),{status:401});
+  const actor=session.staff_id?{id:session.staff_id,email:session.email,role:session.role}:{id:null,email:process.env.ADMIN_EMAIL||'verified-owner',role:'owner'};
+  const requestPath=decodeURIComponent(new URL(req.url,'http://internal').pathname);
+  if(requestPath.startsWith('/api/admin/')&&!staffCan(actor.role,req.method,requestPath))throw Object.assign(new Error('Your staff role does not permit this action.'),{status:403});
+  return actor;
 }
 
 function secureEqText(a, b) {
@@ -485,9 +494,13 @@ async function handle(req, res) {
     if (req.method === 'POST' && path === '/api/admin/login') {
       const input=await jsonBody(req,12*1024); const email=String(input.email||'').trim().toLowerCase();
       const adminEmail=String(process.env.ADMIN_EMAIL||'').trim().toLowerCase(); const saved=process.env.ADMIN_PASSWORD||'';
-      if(!adminEmail || email!==adminEmail || saved.length<24 || !secureEqText(String(input.password||''),saved)) return json(res,401,{error:'Admin credentials are incorrect or not configured.'});
-      const token=randomBytes(32).toString('base64url'); db.prepare('INSERT INTO admin_sessions(token_hash,expires_at,created_at) VALUES(?,?,?)').run(hash(token),Date.now()+8*60*60*1000,now());
-      cookie(res,'asryo_admin',token,8*60*60); return json(res,200,{ok:true});
+      const ownerLogin=adminEmail&&email===adminEmail&&saved.length>=24&&secureEqText(String(input.password||''),saved);
+      const staff=ownerLogin?null:db.prepare('SELECT * FROM ops_staff WHERE email=? AND enabled=1').get(email);
+      if(!ownerLogin&&(!staff||!await passwordMatches(String(input.password||''),staff.password_hash)))return json(res,401,{error:'Admin credentials are incorrect or not configured.'});
+      const token=randomBytes(32).toString('base64url');
+      if(staff)db.prepare('INSERT INTO ops_staff_sessions VALUES(?,?,?,?)').run(hash(token),staff.id,Date.now()+8*60*60*1000,now());
+      else db.prepare('INSERT INTO admin_sessions(token_hash,expires_at,created_at) VALUES(?,?,?)').run(hash(token),Date.now()+8*60*60*1000,now());
+      cookie(res,'asryo_admin',token,8*60*60); return json(res,200,{ok:true,role:staff?.role||'owner'});
     }
     // A Fashion OS owner can obtain a short-lived commerce admin session.
     // Authorization is checked by the existing Vercel Fashion OS authority.
@@ -502,7 +515,10 @@ async function handle(req, res) {
       cookie(res,'asryo_admin',token,30*60);
       return json(res,200,{ok:true,expiresInMinutes:30,mode:'fashion-owner-verified'});
     }
-    if (path.startsWith('/api/admin/')) requireAdmin(req);
+    const actor=path.startsWith('/api/admin/')?requireAdmin(req):null;
+    if(path.startsWith('/api/admin/operations')&&!['GET','HEAD'].includes(req.method)&&!rateLimit(req,res,'operations-write',120,60*1000))return;
+    if(req.method==='GET'&&path==='/api/admin/me')return json(res,200,actor);
+    if(path==='/api/admin/operations'||path.startsWith('/api/admin/operations/'))return await handleOperations({db,req,res,path,url,actor,json,jsonBody,passwordHash});
     if (req.method === 'GET' && path === '/api/admin/commerce') {
       return json(res,200,{readiness:storeReadiness(db),backups:backupState,products:allProducts().map(p=>({...p,profile:listingFor(db,p.id)})),
         notifications:db.prepare('SELECT state,COUNT(*) AS count FROM commerce_notifications GROUP BY state').all(),
@@ -522,6 +538,7 @@ async function handle(req, res) {
     if (path.startsWith('/api/admin/finance/')) return await handleFinance({ db, req, res, path, json, jsonBody });
     if (req.method === 'POST' && path === '/api/admin/logout') {
       const raw=cookies(req).asryo_admin; if(raw) db.prepare('DELETE FROM admin_sessions WHERE token_hash=?').run(hash(raw));
+      if(raw)db.prepare('DELETE FROM ops_staff_sessions WHERE token_hash=?').run(hash(raw));
       clearCookie(res,'asryo_admin'); return json(res,200,{ok:true});
     }
     if (req.method === 'GET' && path === '/api/admin/early-access') {
@@ -585,7 +602,7 @@ async function handle(req, res) {
 
     if (req.method === 'GET') {
       const storePages=['/shop','/oversized-t-shirts','/hoodies','/tracksuits','/new-arrivals','/collections','/product','/size-guide','/cart','/checkout','/account','/my-orders','/wishlist','/contact','/shipping-policy','/returns','/privacy','/terms'];
-      const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path === '/business-os' ? '/business-os.html' : path === '/costing' ? '/finance.html' : path === '/design-studio' ? '/design-studio.html' : path === '/commerce-admin' ? '/commerce-admin.html' : storePages.includes(path) ? '/store.html' : path;
+      const filePath = path === '/' ? '/index.html' : path === '/admin' ? '/admin.html' : path === '/business-os' ? '/business-os.html' : path === '/costing' ? '/finance.html' : path === '/design-studio' ? '/design-studio.html' : path === '/operations-admin'?'/operations-admin.html':path === '/commerce-admin' ? '/commerce-admin.html' : storePages.includes(path) ? '/store.html' : path;
       const safe = normalize(filePath).replace(/^([/\\]*\.\.[/\\])+/, '');
       const full = resolve(join(root,'public',safe));
       const publicRoot = resolve(join(root,'public'));
@@ -598,7 +615,7 @@ async function handle(req, res) {
       if (!file.isFile()) return json(res,404,{error:'Not found.'});
       setHeaders(res,mime[extname(full)] || 'application/octet-stream');
       res.setHeader('Cache-Control', ['.html','.js','.css'].includes(extname(full)) ? 'no-cache' : 'public, max-age=86400, stale-while-revalidate=604800');
-      if (['/admin.html','/admin.js','/inventory.js','/design-studio.html','/design-studio.js','/design-studio.css','/studio-render.js','/commerce-admin.html','/commerce-admin.js'].includes(filePath) || ['/account','/my-orders','/cart','/checkout','/wishlist'].includes(path)) {
+      if (['/admin.html','/admin.js','/inventory.js','/design-studio.html','/design-studio.js','/design-studio.css','/studio-render.js','/commerce-admin.html','/commerce-admin.js','/operations-admin.html','/operations-admin.js'].includes(filePath) || ['/account','/my-orders','/cart','/checkout','/wishlist'].includes(path)) {
         res.setHeader('Cache-Control','private, no-store');
         res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
       }

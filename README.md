@@ -4,6 +4,8 @@
 
 The existing storefront now includes dedicated shop/category/product/cart/checkout/account/order routes, product-release approval profiles, separate ready-stock and pre-order controls, gated Razorpay integration, duplicate-order protection, transactional stock reservations, courier tracking, refunds and a durable email outbox. **Ordering remains safely closed until actual products and operational approvals are configured and verified.**
 
+Private business records at `/operations-admin` include staff roles, supplier and purchase-order records, auditable expenses, confirmed costs, approved promotions and management/GST working reports. No staff, financial records or supplier orders are fabricated or sent.
+
 Use [`docs/COMMERCE_OPERATIONS.md`](docs/COMMERCE_OPERATIONS.md) for authoritative deployment, launch gates, payment verification, backup limitations and rollback instructions. Gateway unit tests simulate provider responses; they are not real merchant transactions.
 
 

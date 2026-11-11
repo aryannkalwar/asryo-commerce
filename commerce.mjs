@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { skuMetadata, hasSkus, recordStockMovement } from './inventory.mjs';
+import {confirmedUnitCost,couponDiscount} from './operations.mjs';
 
 const fail = (status, message) => { throw Object.assign(new Error(message), {status}); };
 const at = () => new Date().toISOString();
@@ -173,7 +174,7 @@ export function validateAddress(input) {
   if (String(address.postalCode).trim() !== clean.postalCode) fail(400,'Enter a six-digit Indian PIN code.');
   return clean;
 }
-export function quote(db, input, env = process.env) {
+export function quote(db, input, env = process.env, includePrivateCosts = false) {
   if(!input || typeof input!=='object' || Array.isArray(input))fail(400,'Enter valid checkout details.');
   const readiness = storeReadiness(db,env);
   if (!readiness.ready) fail(503,'Ordering is not open yet. Approved products, fulfilment, support and payment configuration are required.');
@@ -199,17 +200,21 @@ export function quote(db, input, env = process.env) {
       if (count>preorderRemaining(db,profile)) fail(400,'The confirmed pre-order quantity has been reached.');
     }
     return {id:p.id,name:p.name,quantity:item.quantity,unitPricePaise:p.price_paise,gstBps:profile.gstBps,
-      mode:profile.mode,listingId:profile.listingId,revision:profile.revision,variant:skuMetadata(db,p.id),
+      ...(includePrivateCosts?{unitCostPaise:confirmedUnitCost(db,p.id)}:{}),
+      mode:profile.mode,listingId:profile.listingId,revision:profile.revision,variant:skuMetadata(db,p.id)?(({sku,size,colour,parentProductId})=>({sku,size,colour,parentProductId}))(skuMetadata(db,p.id)):null,
       dispatchDate:profile.dispatchDate,deliveryMinDays:profile.deliveryMinDays,deliveryMaxDays:profile.deliveryMaxDays,
       paymentTiming:profile.paymentTiming,cancellationTerms:profile.cancellationTerms,refundTerms:profile.refundTerms};
   });
   const subtotalPaise = items.reduce((n,x)=>n+x.unitPricePaise*x.quantity,0);
+  const promotion=couponDiscount(db,input.couponCode,subtotalPaise);
+  let remainingDiscount=promotion.discountPaise;
+  items.forEach((item,index)=>{item.discountPaise=index===items.length-1?remainingDiscount:Math.floor(promotion.discountPaise*(item.unitPricePaise*item.quantity)/subtotalPaise);remainingDiscount-=item.discountPaise;});
   const shippingPaise = Number(env.SHIPPING_FEE_PAISE);
-  const taxPaise = items.reduce((n,x)=>n+Math.round(x.unitPricePaise*x.quantity*x.gstBps/(10000+x.gstBps)),0)
+  const taxPaise = items.reduce((n,x)=>n+Math.round((x.unitPricePaise*x.quantity-x.discountPaise)*x.gstBps/(10000+x.gstBps)),0)
     + Math.round(shippingPaise*Number(env.SHIPPING_GST_BPS)/(10000+Number(env.SHIPPING_GST_BPS)));
-  const totalPaise = subtotalPaise+shippingPaise;
+  const totalPaise = subtotalPaise+shippingPaise-promotion.discountPaise;
   if (![shippingPaise,subtotalPaise,totalPaise,taxPaise].every(Number.isSafeInteger) || totalPaise<100 || totalPaise>100000000) fail(400,'Order total is invalid.');
-  return {address,items,paymentMethod:method,subtotalPaise,shippingPaise,taxPaise,totalPaise,currency:'INR',taxInclusive:true};
+  return {address,items,paymentMethod:method,subtotalPaise,shippingPaise,taxPaise,totalPaise,...promotion,currency:'INR',taxInclusive:true};
 }
 
 function trackingToken(seed, key) {return createHmac('sha256',seed).update(key).digest('base64url');}
@@ -245,7 +250,7 @@ export async function createCheckout(db, input, key, customer, env = process.env
   db.exec('BEGIN IMMEDIATE');
   try {
     // Prices, approval revisions, physical stock and pre-order capacity are checked under the same write lock.
-    result = quote(db,input,env);
+    result = quote(db,input,env,true);
     db.prepare(`INSERT INTO orders(id,customer_id,public_token_hash,status,payment_status,payment_method,total_paise,shipping_paise,currency,shipping_json,created_at,updated_at)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).run(id,customer?.id || null,digest(trackingToken(seed,id)),result.paymentMethod==='razorpay'?'pending_payment':'confirmed',result.paymentMethod==='razorpay'?'pending':'due_on_delivery',result.paymentMethod,result.totalPaise,result.shippingPaise,'INR',JSON.stringify(result.address),at(),at());
     for (const item of result.items) {
@@ -257,6 +262,7 @@ export async function createCheckout(db, input, key, customer, env = process.env
     }
     db.prepare('INSERT INTO commerce_checkouts(order_id,key_hash,request_hash,access_seed,email,gateway_state,snapshot_json,created_at) VALUES(?,?,?,?,?,?,?,?)')
       .run(id,keyHash,requestHash,seed,result.address.email,result.paymentMethod==='razorpay'?'creating':'none',JSON.stringify(result),at());
+    if(result.couponCode)db.prepare('INSERT INTO ops_coupon_redemptions(order_id,code,discount_paise) VALUES(?,?,?)').run(id,result.couponCode,result.discountPaise);
     audit(db,id,'order_created',{paymentMethod:result.paymentMethod,preorderConsent:input.preorderConsent===true});
     if (result.paymentMethod==='cash_on_delivery') queue(db,id,'confirmed');
     db.exec('COMMIT');
@@ -376,6 +382,7 @@ function releaseReservation(db, checkout) {
     }
   }
   db.prepare('UPDATE commerce_checkouts SET released=1 WHERE order_id=?').run(checkout.order_id);
+  if(db.prepare("SELECT 1 FROM sqlite_master WHERE name='ops_coupon_redemptions'").get())db.prepare('UPDATE ops_coupon_redemptions SET released=1 WHERE order_id=?').run(checkout.order_id);
 }
 export function updateOrder(db, orderId, input, actor = 'admin') {
   const checkout = db.prepare('SELECT * FROM commerce_checkouts WHERE order_id=?').get(orderId);
@@ -429,8 +436,10 @@ export async function refundOrder(db, orderId, reason, env = process.env, fetche
 }
 export function orderDetail(db, order) {
   const checkout = db.prepare('SELECT snapshot_json FROM commerce_checkouts WHERE order_id=?').get(order.id);
+  const savedSummary=checkout?JSON.parse(checkout.snapshot_json):null;
+  const summary=savedSummary?{...savedSummary,items:savedSummary.items.map(({unitCostPaise,...item})=>item)}:null;
   return {id:order.id,status:order.status,paymentStatus:order.payment_status,paymentMethod:order.payment_method,totalPaise:order.total_paise,shippingPaise:order.shipping_paise,currency:order.currency,createdAt:order.created_at,updatedAt:order.updated_at,
-    summary:checkout?JSON.parse(checkout.snapshot_json):null,
+    summary,
     shipment:db.prepare('SELECT carrier,tracking_number AS trackingNumber,tracking_url AS trackingUrl FROM commerce_shipments WHERE order_id=?').get(order.id)||null,
     events:db.prepare("SELECT kind,detail_json AS detail,created_at AS createdAt FROM commerce_events WHERE order_id=? ORDER BY rowid").all(order.id).map(x=>({...x,detail:JSON.parse(x.detail)}))};
 }

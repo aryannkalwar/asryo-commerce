@@ -18,3 +18,5 @@ Disallow: /my-orders
 Disallow: /checkout
 Disallow: /cart
 Disallow: /wishlist
+
+Disallow: /operations-admin
