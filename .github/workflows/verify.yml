@@ -17,5 +17,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
+      - name: Install pinned runtime dependencies
+        run: npm ci --ignore-scripts --no-fund
       - name: Run syntax and API smoke tests
         run: npm run check
