@@ -21,7 +21,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <script src="/app.js?v=editorial-20261107" type="module"></script>
   <script src="/product-page.js?v=launch-readiness-2" type="module"></script>
-  <script src="/editorial.js?v=asryo20-20261107" type="module"></script>
+  <script src="/editorial.js?v=sales-ready-20261118" type="module"></script>
 <link rel="icon" href="/assets/asryo-black-favicon.png" type="image/png" sizes="192x192">
 <link rel="stylesheet" href="/brand.css?v=black-emblem-20261024">
   </head>
@@ -37,11 +37,13 @@
       <span class="menu-icon" aria-hidden="true"><i></i><i></i></span><span>MENU</span>
     </button>
     <nav class="editorial-nav" id="editorialNav" aria-label="Main navigation">
-      <a href="#featured">The Collection</a>
+      <a href="/shop">Shop</a>
+      <a href="/oversized-t-shirts">T-Shirts</a>
+      <a href="/hoodies">Hoodies</a>
       <a href="#lookbook">Lookbook</a>
-      <a href="#story">The Brand</a>
+      <a href="/contact">Support</a>
       <a href="/design-archive.html">Design Archive</a>
-      <a class="nav-access" href="#early-access">Early Access ↗</a>
+      <a class="nav-access" id="launchNav" href="#early-access">Early Access ↗</a>
     </nav>
     <div class="header-actions" id="headerActions" hidden>
       <button class="icon-button account-open" type="button" aria-label="Open account">Account</button>
@@ -57,8 +59,8 @@
         <h1 id="heroTitle">BEYOND<br><em>ORDINARY.</em></h1>
         <p class="editorial-hero-sub">Original graphics. Oversized proportions. A new point of view in Indian streetwear.</p>
         <div class="editorial-hero-buttons">
-          <a class="editorial-button editorial-button-light" href="/shop">Explore the collection <span aria-hidden="true">↗</span></a>
-          <a class="editorial-button editorial-button-ghost" href="#story">Discover ASRYO <span aria-hidden="true">↗</span></a>
+          <a class="editorial-button editorial-button-light" id="heroPrimary" href="#early-access">Get early access <span aria-hidden="true">↗</span></a>
+          <a class="editorial-button editorial-button-ghost" href="/shop">Explore the collection <span aria-hidden="true">↗</span></a>
         </div>
         <p class="editorial-availability" id="heroAvailability">Original design studies. Physical samples, stock and launch dates are still being confirmed.</p>
       </div>
@@ -66,6 +68,11 @@
       <a class="editorial-scroll" href="#featured" aria-label="Scroll to featured designs">SCROLL TO EXPLORE ↓</a>
     </section>
 
+    <section class="editorial-section editorial-featured" id="liveEdit" aria-labelledby="liveEditTitle" hidden>
+      <div class="editorial-section-top"><div><p class="editorial-eyebrow">ASRYO / SHOP THE RELEASE</p><h2 id="liveEditTitle">THE AVAILABLE <em>EDIT.</em></h2></div><p>Explore approved products with confirmed pricing, garment measurements and delivery information.</p></div>
+      <div class="editorial-product-grid" id="liveEditGrid"></div>
+      <div class="editorial-section-footer"><p>ORDER WITH CONFIDENCE. <span>Delivery eligibility and charges are confirmed before checkout.</span></p><a href="/shop">Shop all products ↗</a></div>
+    </section>
     <section class="editorial-section editorial-featured" id="featured" aria-labelledby="featuredTitle">
       <div id="tshirts" class="editorial-anchor" aria-hidden="true"></div>
       <div class="editorial-section-top">
@@ -182,7 +189,7 @@
   <footer class="editorial-footer">
     <div class="editorial-footer-intro"><a class="brand asryo-brand-lockup" href="/" aria-label="ASRYO homepage"><img class="asryo-logo-icon" src="/assets/asryo-black-monogram.webp" width="320" height="320" alt="" aria-hidden="true"><img class="asryo-logo-wordmark" src="/assets/asryo-metallic-wordmark.webp" width="760" height="141" alt="ASRYO"></a><p>BEYOND ORDINARY.<br>AN INDEPENDENT INDIAN STREETWEAR LABEL.</p></div>
     <div class="editorial-footer-links"><h3>EXPLORE</h3><a href="/shop">Shop &amp; Collection</a><a href="#featured">The Collection</a><a href="/design-archive.html">Design Archive</a><a href="/about.html">Our Story</a><a href="#early-access">Launch Interest</a></div>
-    <div class="editorial-footer-links"><h3>INFORMATION</h3><a href="/policies.html">Service &amp; Policies</a><a href="/preorders.html">Pre-order information</a><a href="/account">Customer account</a><a href="/track.html">Track an existing order</a><a href="#faq">FAQ</a><p id="supportLine">Customer support contact and return/delivery terms will be published before orders open.</p></div>
+    <div class="editorial-footer-links"><h3>INFORMATION</h3><a href="/contact">Contact &amp; support</a><a href="/size-guide">Size guide</a><a href="/shipping-policy">Shipping &amp; delivery</a><a href="/returns">Returns &amp; refunds</a><a href="/policies.html">Service &amp; Policies</a><a href="/preorders.html">Pre-order information</a><a href="/account">Customer account</a><a href="/track.html">Track an existing order</a><a href="#faq">FAQ</a><p id="supportLine">Customer support contact and return/delivery terms will be published before orders open.</p></div>
     <div class="editorial-footer-bottom"><span>© <span id="year">2026</span> ASRYO. ALL RIGHTS RESERVED.</span><span>CREATED TO STAND APART · INDIA</span></div>
   </footer>
     <button class="assistant-launch" id="assistantOpen" type="button" hidden><span>✳</span> Ask ASRYO</button>
