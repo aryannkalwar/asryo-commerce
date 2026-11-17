@@ -41,9 +41,13 @@ async function refreshApprovedEdit(){
     link.href=href;link.replaceChildren(document.createTextNode(label+' '));
     const arrow=document.createElement('span');arrow.setAttribute('aria-hidden','true');arrow.textContent='↗';link.append(arrow);
   }
-  setLink(hero,'Get early access','#early-access');setLink(nav,'Early access','#early-access');
+  setLink(hero,'Explore the collection','/shop');setLink(nav,'The collection','/shop');
+  const secondary=document.getElementById('heroSecondary');
+  if(secondary)setLink(secondary,'Discover ASRYO','#story');
   if(!navigator.onLine)return;
   try{
+    const interest=await fetch('/api/early-access/status',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+    if(interest?.acceptingInterest&&navigator.onLine){setLink(nav,'Early access','#early-access');if(secondary)setLink(secondary,'Get early access','#early-access');}
     const response=await fetch('/api/storefront',{credentials:'same-origin',cache:'no-store'});
     if(!response.ok)return;
     const store=await response.json();
