@@ -1,0 +1,24 @@
+import {readFile} from 'node:fs/promises';
+import {DatabaseSync} from 'node:sqlite';
+import assert from 'node:assert/strict';
+const source=(await readFile(new URL('./worker.mjs',import.meta.url),'utf8')).replace("import storefront from './storefront-original.mjs';", "const storefront={fetch:async()=>new Response('original')};");
+const {default:worker}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const db=new DatabaseSync(':memory:');
+db.exec('CREATE TABLE design_preferences(visitor_id TEXT PRIMARY KEY,design TEXT NOT NULL,source TEXT NOT NULL,updated_at INTEGER NOT NULL)');
+const env={FEEDBACK:{prepare(sql){return {bind(...params){return {first:async()=>db.prepare(sql).get(...params),run:async()=>({meta:{changes:Number(db.prepare(sql).run(...params).changes)}})};}}},async batch(queries){db.exec('BEGIN');try{const results=[];for(const q of queries)results.push(await q.run());db.exec('COMMIT');return results;}catch(e){db.exec('ROLLBACK');throw e;}}}};
+const request=(method,body,cookie,origin='https://asryo.com')=>new Request('https://asryo.com/api/design-vote',{method,headers:{Origin:origin,'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{})},...(body?{body:typeof body==='string'?body:JSON.stringify(body)}:{})});
+assert.equal((await worker.fetch(request('POST',{design:'speed-division'},null,'https://other.example'),env)).status,403);
+assert.equal((await worker.fetch(request('POST',{design:'fake'},null),env)).status,400);
+assert.equal((await worker.fetch(request('POST','a'.repeat(1025)),env)).status,400);
+const first=await worker.fetch(request('POST',{design:'speed-division',source:'linkedin'}),env);assert.equal(first.status,200);const cookie=first.headers.get('Set-Cookie').split(';')[0];
+assert.match(first.headers.get('Set-Cookie'),/Secure; HttpOnly; SameSite=Lax/);
+assert.equal((await worker.fetch(request('POST',{design:'dream-future',source:'spam'},cookie),env)).status,200);
+assert.equal(db.prepare('SELECT COUNT(*) AS n FROM design_preferences').get().n,1);
+assert.equal(db.prepare('SELECT source FROM design_preferences').get().source,'other');
+assert.equal((await (await worker.fetch(request('GET',null,cookie),env)).json()).design,'dream-future');
+assert.equal((await worker.fetch(request('DELETE',null,cookie),env)).status,200);
+assert.equal(db.prepare('SELECT COUNT(*) AS n FROM design_preferences').get().n,0);
+for(const path of ['/about.html','/vote','/vote-client.js','/sitemap.xml']){const r=await worker.fetch(new Request('https://asryo.com'+path),env);assert.equal(r.status,200);assert.ok((await r.text()).length>100);}
+assert.equal((await worker.fetch(new Request('https://asryo.com/vote',{method:'POST'}),env)).status,405);
+console.log('Passed: cross-origin rejection, invalid and oversized input, durable preference update, cookie protections, withdrawal, and page responses.');
+db.close();

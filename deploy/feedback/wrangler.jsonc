@@ -1,0 +1,7 @@
+{
+  "name": "asryo-public-storefront",
+  "main": "worker.mjs",
+  "compatibility_date": "2025-01-01",
+  "d1_databases": [{"binding":"FEEDBACK","database_name":"asryo-design-feedback","database_id":"5fe1026f-50a5-456d-9e3f-3d4ea83dd188"}],
+  "observability": {"enabled":true,"head_sampling_rate":1,"traces":{"enabled":true,"head_sampling_rate":0.1}}
+}
